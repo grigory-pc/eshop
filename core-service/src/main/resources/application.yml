@@ -3,24 +3,24 @@ server:
 
 spring:
   r2dbc:
-    url: r2dbc:h2:mem:///eshop;DB_CLOSE_DELAY=-1
-    username: sa
-    password:
+    url: r2dbc:postgresql://localhost:5432/eshop-db   # URL подключения к базе данных
+    username: postgres                             # Имя пользователя базы данных
+    password: postgres                          # Пароль пользователя
     pool:
-      enabled: true
-      initial-size: 10
-      max-size: 50
-      max-idle-time: 30s
-      max-life-time: 10m
-      validation-query: SELECT 1
-jdbc:
-  driverClassName: org.h2.Driver
-  url: jdbc:h2:mem:eshop;DB_CLOSE_DELAY=-1;DB_CLOSE_ON_EXIT=FALSE
-  username: sa
-  password:
+      enabled: true                               # Включение пула соединений
+      initial-size: 10                            # Начальное количество соединений в пуле
+      max-size: 50                                # Максимальное количество соединений
+      max-idle-time: 30s                          # Время бездействия соединения перед закрытием
+      max-life-time: 10m                          # Максимальное время жизни соединения
+      validation-query: SELECT 1                  # SQL-запрос для проверки работоспособности соединения
 
 client:
   payment-service:
     base-url: "http://localhost:8081/payment-service/buy"
     connect-timeout-ms: 1000
     response-timeout-ms: 1000
+
+flyway:
+  enabled: true
+  locations: classpath:db/migration
+  validate-on-migrate: true
