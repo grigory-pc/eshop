@@ -40,7 +40,7 @@
 //  @BeforeAll
 //  public static void initTables(@Autowired ConnectionFactory connectionFactory,
 //                                @Autowired ResourceLoader resourceLoader) throws IOException {
-//    Resource resource = resourceLoader.getResource("classpath:V1__initial_schema.sql");
+//    Resource resource = resourceLoader.getResource("classpath:V1__init.sql");
 //    String script = Files.readString(Paths.get(resource.getFile().getPath()));
 //
 //    Flux.from(DatabaseClient.create(connectionFactory)

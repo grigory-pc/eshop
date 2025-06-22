@@ -1,4 +1,3 @@
-//ToDo удалить после тестов
 DROP TABLE item, cart, cart_item, orders, order_item
 
 CREATE TABLE IF NOT EXISTS item(
