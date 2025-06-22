@@ -14,7 +14,6 @@ repositories {
 dependencies {
     compileOnly("org.projectlombok:lombok")
 
-    implementation("org.springframework.boot:spring-boot-starter-web")
     implementation("org.springframework.boot:spring-boot-starter-validation")
     implementation("org.springframework.boot:spring-boot-starter-thymeleaf")
     implementation("org.mapstruct:mapstruct:1.5.5.Final")
@@ -74,11 +73,19 @@ tasks.withType<GenerateTask> {
             "generateModels" to "true",
             "generateSupportingFiles" to "true",
             "configPackage" to "ru.yandex.practicum.eshop.payment.service.config",
-            "delegatePattern" to "true",
+            "delegatePattern" to "false",
             "withXml" to "false",
             "useBeanValidation" to "true",
             "useRxJava2" to "false",
             "useFeign" to "false",
-            "useOkHttp" to "true"
+            "useOkHttp" to "true",
+            "reactive" to "true",
+            "javaVersion" to "21"
     ))
+}
+
+java {
+    toolchain {
+        languageVersion = JavaLanguageVersion.of(21)
+    }
 }

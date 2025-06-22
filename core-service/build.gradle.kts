@@ -74,11 +74,19 @@ tasks.withType<GenerateTask> {
             "generateModels" to "true",
             "generateSupportingFiles" to "false",
             "configPackage" to "ru.yandex.practicum.eshop.core.config",
-            "delegatePattern" to "true",
+            "delegatePattern" to "false",
             "withXml" to "false",
             "useBeanValidation" to "true",
             "useRxJava2" to "false",
             "useFeign" to "false",
-            "useOkHttp" to "true"
+            "useOkHttp" to "true",
+            "reactive" to "true",
+            "javaVersion" to "21"
     ))
+}
+
+java {
+    toolchain {
+        languageVersion = JavaLanguageVersion.of(21)
+    }
 }

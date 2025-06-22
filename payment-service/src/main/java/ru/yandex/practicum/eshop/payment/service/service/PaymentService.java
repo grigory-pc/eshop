@@ -8,8 +8,9 @@ import reactor.core.publisher.Mono;
 public interface PaymentService {
   /**
    * Формирование заказа для товаров в корзине.
+   * @param cartId - id корзины.
    *
    * @return id заказа.
    */
-  Mono<Long> buyItems();
+  Mono<Long> buyItems(Long cartId);
 }

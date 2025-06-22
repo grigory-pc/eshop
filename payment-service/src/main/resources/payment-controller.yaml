@@ -24,11 +24,8 @@ paths:
           content:
             application/json:
               schema:
-                type: object
-                properties:
-                  orderId:
-                    type: integer
-                    format: int64
+                $ref: '#/components/schemas/CreatePaymentByCartIdResponseOk'
+
 components:
   schemas:
     CreatePaymentByCartIdResponseOk:

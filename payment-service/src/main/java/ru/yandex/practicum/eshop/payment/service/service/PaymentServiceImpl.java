@@ -29,7 +29,6 @@ import static ru.yandex.practicum.eshop.payment.service.enums.MessagesLog.MESSAG
 @Service
 @RequiredArgsConstructor
 public class PaymentServiceImpl implements PaymentService {
-  private static final Long CART_ID = 1L;
   private static final Double TOTAL_INIT = 0.00;
   private final ItemRepository itemRepository;
   private final CartRepository cartRepository;
@@ -38,15 +37,15 @@ public class PaymentServiceImpl implements PaymentService {
   private final OrderItemRepository orderItemRepository;
 
   @Override
-  public Mono<Long> buyItems() {
+  public Mono<Long> buyItems(Long cartId) {
     return Mono.defer(() -> {
       log.info(MESSAGE_LOG_DB_SAVE_REQUEST.getMessage());
 
-      return cartRepository.findById(CART_ID)
+      return cartRepository.findById(cartId)
                            .flatMap(this::fetchAndProcessCartItems)
                            .flatMap(this::createAndSaveOrder)
                            .flatMap(this::saveOrderItems)
-                           .flatMap(this::flushItemAndCart)
+                           .flatMap(savedOrder -> flushItemAndCart(savedOrder, cartId))
                            .map(Orders::getId)
                            .onErrorResume(e -> {
                              log.error(MESSAGE_LOG_DB_RESPONSE_ERROR.getMessage(), e);
@@ -56,13 +55,13 @@ public class PaymentServiceImpl implements PaymentService {
     });
   }
 
-  private Mono<Orders> flushItemAndCart(Orders orders) {
+  private Mono<Orders> flushItemAndCart(Orders orders, Long cartId) {
     return Mono.defer(() -> {
       log.info(MESSAGE_LOG_FLUSH_CART.getMessage());
 
-      Cart cart = new Cart(CART_ID, TOTAL_INIT);
+      Cart cart = new Cart(cartId, TOTAL_INIT);
       return cartRepository.save(cart)
-                           .then(cartItemRepository.deleteAllByCartId(CART_ID))
+                           .then(cartItemRepository.deleteAllByCartId(cartId))
                            .then(itemRepository.updateAllCountToZero())
                            .doOnSuccess(v -> log.info(MESSAGE_LOG_FLUSH_CART_SUCCESS.getMessage()))
                            .thenReturn(orders)

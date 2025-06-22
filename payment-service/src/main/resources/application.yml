@@ -1,5 +1,5 @@
 server:
-  port: 8080
+  port: 8081
 
 spring:
   r2dbc:
@@ -18,9 +18,3 @@ jdbc:
   url: jdbc:h2:mem:eshop;DB_CLOSE_DELAY=-1;DB_CLOSE_ON_EXIT=FALSE
   username: sa
   password:
-
-client:
-  payment-service:
-    base-url: "http://localhost:8081/payment-service/buy"
-    connect-timeout-ms: 1000
-    response-timeout-ms: 1000
