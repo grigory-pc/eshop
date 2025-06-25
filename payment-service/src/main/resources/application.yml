@@ -3,13 +3,13 @@ server:
 
 spring:
   r2dbc:
-    url: r2dbc:postgresql://localhost:5432/eshop-db   # URL подключения к базе данных
-    username: postgres                             # Имя пользователя базы данных
-    password: postgres                          # Пароль пользователя
+    url: ${DATASOURCE_URL}              # URL подключения к базе данных
+    username: ${DATASOURCE_USERNAME}    # Имя пользователя базы данных
+    password: ${DATASOURCE_PASSWORD}    # Пароль пользователя
     pool:
-      enabled: true                               # Включение пула соединений
-      initial-size: 10                            # Начальное количество соединений в пуле
-      max-size: 50                                # Максимальное количество соединений
-      max-idle-time: 30s                          # Время бездействия соединения перед закрытием
-      max-life-time: 10m                          # Максимальное время жизни соединения
-      validation-query: SELECT 1                  # SQL-запрос для проверки работоспособности соединения
+      enabled: true                     # Включение пула соединений
+      initial-size: 10                  # Начальное количество соединений в пуле
+      max-size: 50                      # Максимальное количество соединений
+      max-idle-time: 30s                # Время бездействия соединения перед закрытием
+      max-life-time: 10m                # Максимальное время жизни соединения
+      validation-query: SELECT 1        # SQL-запрос для проверки работоспособности соединения

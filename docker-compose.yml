@@ -1,0 +1,32 @@
+version: '3.1'
+services:
+  eshop-service:
+    build: ./core-service
+    depends_on:
+      - eshop-db
+    ports:
+      - "8080:8080"
+    environment:
+      - PAYMENT_SERVER_URL=http://localhost:8081/payment-service/buy
+      - DATASOURCE_URL=r2dbc:postgresql://localhost:5432/eshop-db
+      - DATASOURCE_USERNAME=postgres
+      - DATASOURCE_PASSWORD=postgres
+
+  payment-service:
+    build: ./payment-service
+    depends_on:
+      - eshop-db
+      - eshop-service
+    ports:
+      - "8081:8081"
+    environment:
+      - DATASOURCE_URL=r2dbc:postgresql://localhost:5432/eshop-db
+      - DATASOURCE_USERNAME=postgres
+      - DATASOURCE_PASSWORD=postgres
+
+  eshop-db:
+    image: postgres:14-alpine
+    environment:
+      - POSTGRES_DB=eshop-db
+      - POSTGRES_USER=postgres
+      - POSTGRES_PASSWORD=postgres
