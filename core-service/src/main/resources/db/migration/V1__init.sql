@@ -1,3 +1,9 @@
+ALTER TABLE cart_item DROP CONSTRAINT IF EXISTS cart_item_cart_id_fkey;
+ALTER TABLE cart_item DROP CONSTRAINT IF EXISTS cart_item_item_id_fkey;
+ALTER TABLE order_item DROP CONSTRAINT IF EXISTS order_item_order_id_fkey;
+ALTER TABLE order_item DROP CONSTRAINT IF EXISTS order_item_item_id_fkey;
+
+
 DROP TABLE IF EXISTS item;
 DROP TABLE IF EXISTS cart;
 DROP TABLE IF EXISTS cart_item;
