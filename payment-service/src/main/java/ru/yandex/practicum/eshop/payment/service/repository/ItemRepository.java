@@ -18,6 +18,6 @@ public interface ItemRepository extends R2dbcRepository<Item, Long> {
    */
   @Transactional
   @Modifying
-  @Query("UPDATE Item i SET i.count = 0")
+  @Query("UPDATE item SET count = 0")
   Mono<Void> updateAllCountToZero();
 }

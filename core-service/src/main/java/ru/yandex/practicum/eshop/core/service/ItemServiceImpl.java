@@ -34,9 +34,15 @@ import ru.yandex.practicum.eshop.core.repository.ItemRepository;
 import ru.yandex.practicum.eshop.core.repository.OrderItemRepository;
 import ru.yandex.practicum.eshop.core.repository.OrderRepository;
 
+import static ru.yandex.practicum.eshop.core.enums.MessagesLog.MESSAGE_LOG_ADD_ITEM_TO_CART;
 import static ru.yandex.practicum.eshop.core.enums.MessagesLog.MESSAGE_LOG_DB_GET_REQUEST;
 import static ru.yandex.practicum.eshop.core.enums.MessagesLog.MESSAGE_LOG_DB_RESPONSE_ERROR;
+import static ru.yandex.practicum.eshop.core.enums.MessagesLog.MESSAGE_LOG_FIND_CARTITEM;
+import static ru.yandex.practicum.eshop.core.enums.MessagesLog.MESSAGE_LOG_FIND_ITEM;
+import static ru.yandex.practicum.eshop.core.enums.MessagesLog.MESSAGE_LOG_FIND_ITEM_OR_CARTITEM;
 import static ru.yandex.practicum.eshop.core.enums.MessagesLog.MESSAGE_LOG_ITEMS_SIZE;
+import static ru.yandex.practicum.eshop.core.enums.MessagesLog.MESSAGE_LOG_FIND_ALL_ITEMS;
+import static ru.yandex.practicum.eshop.core.enums.MessagesLog.MESSAGE_LOG_SAVE_CART;
 
 @Slf4j
 @Service
@@ -72,7 +78,7 @@ public class ItemServiceImpl implements ItemService {
                                                 total));
                            })
                            .onErrorResume(e -> {
-                             log.error(MESSAGE_LOG_DB_RESPONSE_ERROR.getMessage(), e);
+                             log.error(MESSAGE_LOG_FIND_ALL_ITEMS.getMessage(), e);
                              return Mono.error(new DataBaseRequestException(
                                  MESSAGE_LOG_DB_RESPONSE_ERROR.getMessage(), e));
                            });
@@ -90,7 +96,7 @@ public class ItemServiceImpl implements ItemService {
                                                 total));
                            })
                            .onErrorResume(e -> {
-                             log.error(MESSAGE_LOG_DB_RESPONSE_ERROR.getMessage(), e);
+                             log.error(MESSAGE_LOG_FIND_ALL_ITEMS.getMessage(), e);
                              return Mono.error(new DataBaseRequestException(
                                  MESSAGE_LOG_DB_RESPONSE_ERROR.getMessage(), e));
                            });
@@ -144,7 +150,7 @@ public class ItemServiceImpl implements ItemService {
                            .map(itemMapper::toDto)
                            .switchIfEmpty(Mono.error(new ItemNotFoundException("Товар не найден")))
                            .onErrorResume(e -> {
-                             log.error(MESSAGE_LOG_DB_RESPONSE_ERROR.getMessage(), e);
+                             log.error(MESSAGE_LOG_FIND_ITEM.getMessage(), e);
                              return Mono.error(new DataBaseRequestException(
                                  MESSAGE_LOG_DB_RESPONSE_ERROR.getMessage(), e));
                            });
@@ -254,10 +260,11 @@ public class ItemServiceImpl implements ItemService {
                              .then(itemRepository.incrementCount(itemId))
                              .then(updateCartTotal(existingCart))
                              .onErrorResume(e -> {
+                               log.error(MESSAGE_LOG_ADD_ITEM_TO_CART.getMessage(), e);
                                if (e instanceof Exception) {
                                  return Mono.error(
-                                     new DataBaseRequestException("Ошибка доступа к базе данных",
-                                                                  e));
+                                     new DataBaseRequestException(
+                                         MESSAGE_LOG_ADD_ITEM_TO_CART.getMessage(), e));
                                } else {
                                  return Mono.error(new DataBaseRequestException(
                                      "Произошла ошибка при обновлении корзины", e));
@@ -288,6 +295,11 @@ public class ItemServiceImpl implements ItemService {
     return calculateTotal()
         .doOnNext(existingCart::setTotal)
         .then(cartRepository.save(existingCart))
+        .onErrorResume(e -> {
+          log.error(MESSAGE_LOG_SAVE_CART.getMessage(), e);
+          return Mono.error(
+              new DataBaseRequestException(MESSAGE_LOG_DB_RESPONSE_ERROR.getMessage(), e));
+        })
         .then();
   }
 
@@ -296,7 +308,12 @@ public class ItemServiceImpl implements ItemService {
                              .flatMap(cartItem -> itemRepository.findById(cartItem.getItemId())
                                                                 .map(item -> item.getPrice()
                                                                              * cartItem.getCount()))
-                             .reduce(0.0, Double::sum);
+                             .reduce(0.0, Double::sum)
+                             .onErrorResume(e -> {
+                               log.error(MESSAGE_LOG_FIND_CARTITEM.getMessage(), e);
+                               return Mono.error(new DataBaseRequestException(
+                                   MESSAGE_LOG_DB_RESPONSE_ERROR.getMessage(), e));
+                             });
   }
 
   private Mono<List<Item>> getItemsFromCart() {
@@ -304,6 +321,11 @@ public class ItemServiceImpl implements ItemService {
                              .map(CartItem::getItemId)
                              .collectList()
                              .flatMap(ids -> itemRepository.findAllById(ids)
-                                                           .collectList());
+                                                           .collectList())
+                             .onErrorResume(e -> {
+                               log.error(MESSAGE_LOG_FIND_ITEM_OR_CARTITEM.getMessage(), e);
+                               return Mono.error(new DataBaseRequestException(
+                                   MESSAGE_LOG_DB_RESPONSE_ERROR.getMessage(), e));
+                             });
   }
 }

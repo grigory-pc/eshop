@@ -34,7 +34,7 @@ public interface ItemRepository extends R2dbcRepository<Item, Long> {
    */
   @Transactional
   @Modifying
-  @Query("UPDATE Item i SET i.count = i.count + 1 WHERE i.id = :id")
+  @Query("UPDATE item SET count = count + 1 WHERE id = :id")
   Mono<Void> incrementCount(@Param("id") Long id);
 
   /**
@@ -44,14 +44,6 @@ public interface ItemRepository extends R2dbcRepository<Item, Long> {
    */
   @Transactional
   @Modifying
-  @Query("UPDATE Item i SET i.count = i.count - 1 WHERE i.id = :id")
+  @Query("UPDATE item SET count = count - 1 WHERE id = :id")
   Mono<Void> decrementCount(@Param("id") Long id);
-
-  /**
-   * Сброс количества товаров.
-   */
-  @Transactional
-  @Modifying
-  @Query("UPDATE Item i SET i.count = 0")
-  Mono<Void> updateAllCountToZero();
 }
