@@ -4,16 +4,16 @@ import io.r2dbc.spi.ConnectionFactory;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.util.Map;
 import org.springframework.boot.ApplicationArguments;
 import org.springframework.boot.ApplicationRunner;
 import org.springframework.core.io.ResourceLoader;
+import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.r2dbc.core.DatabaseClient;
 import reactor.core.publisher.Mono;
 import ru.yandex.practicum.eshop.core.entity.Cart;
 import ru.yandex.practicum.eshop.core.entity.Item;
 import ru.yandex.practicum.eshop.core.repository.CartRepository;
-import ru.yandex.practicum.eshop.core.repository.ItemRepository;
-import java.util.List;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
@@ -30,10 +30,16 @@ public class DataLoader implements ApplicationRunner {
   private static final String ITEM_TSHIRT_IMG_PATH = "/images/tshirt.jpg";
   private static final Double TOTAL_INIT = 0.00;
   public static final String PATH_INIT_SQL_SCRIPT = "classpath:db/migration/V1__init.sql";
+  public static final String REDIS_KEY_ITEM = "item";
+  public static final String REDIS_ITEM_FIELD_TITLE = "title";
+  public static final String REDIS_ITEM_FIELD_IMG_PATH = "imgPath";
+  public static final String REDIS_ITEM_FIELD_DESCRIPTION = "description";
+  public static final String REDIS_ITEM_FIELD_PRICE = "price";
+  public static final String REDIS_ITEM_FIELD_COUNT = "count";
   private final ConnectionFactory connectionFactory;
   private final ResourceLoader resourceLoader;
-  private final ItemRepository itemRepository;
   private final CartRepository cartRepository;
+  private final RedisTemplate<String, String> redisTemplate;
 
   @Override
   public void run(ApplicationArguments args) {
@@ -71,15 +77,45 @@ public class DataLoader implements ApplicationRunner {
     Cart newCart = Cart.builder()
                        .total(TOTAL_INIT)
                        .build();
-    cartRepository.save(newCart)
-                  .doOnNext(cart -> System.out.println(
-                      "Сохранена корзина с ID: " + cart.getId()))
-                  .subscribe(System.out::println);
 
-    itemRepository.saveAll(List.of(shorts, sunglasses, tShirt))
-                  .doOnNext(item -> System.out.println(
-                      "Сохранены товары "))
+    cartRepository.save(newCart)
+                  .doOnNext(cart -> log.info("Сохранена корзина с ID: " + cart.getId()))
                   .subscribe(System.out::println);
+    //
+    //    itemRepository.saveAll(List.of(shorts, sunglasses, tShirt))
+    //                  .doOnNext(item -> System.out.println(
+    //                      "Сохранены товары "))
+    //                  .subscribe(System.out::println);
+
+    redisTemplate.opsForHash().putAll(REDIS_KEY_ITEM + ":1",
+                                      Map.of(
+                                          REDIS_ITEM_FIELD_TITLE, shorts.getTitle(),
+                                          REDIS_ITEM_FIELD_IMG_PATH, shorts.getImgPath(),
+                                          REDIS_ITEM_FIELD_DESCRIPTION, shorts.getDescription(),
+                                          REDIS_ITEM_FIELD_PRICE, shorts.getPrice(),
+                                          REDIS_ITEM_FIELD_COUNT, shorts.getCount()
+                                      )
+    );
+
+    redisTemplate.opsForHash().putAll(REDIS_KEY_ITEM + ":2",
+                                      Map.of(
+                                          REDIS_ITEM_FIELD_TITLE, sunglasses.getTitle(),
+                                          REDIS_ITEM_FIELD_IMG_PATH, sunglasses.getImgPath(),
+                                          REDIS_ITEM_FIELD_DESCRIPTION, sunglasses.getDescription(),
+                                          REDIS_ITEM_FIELD_PRICE, sunglasses.getPrice(),
+                                          REDIS_ITEM_FIELD_COUNT, sunglasses.getCount()
+                                      )
+    );
+
+    redisTemplate.opsForHash().putAll(REDIS_KEY_ITEM + ":3",
+                                      Map.of(
+                                          REDIS_ITEM_FIELD_TITLE, tShirt.getTitle(),
+                                          REDIS_ITEM_FIELD_IMG_PATH, tShirt.getImgPath(),
+                                          REDIS_ITEM_FIELD_DESCRIPTION, tShirt.getDescription(),
+                                          REDIS_ITEM_FIELD_PRICE, tShirt.getPrice(),
+                                          REDIS_ITEM_FIELD_COUNT, tShirt.getCount()
+                                      )
+    );
   }
 
   private Mono<Void> executeSqlScript(String scriptPath) throws IOException {

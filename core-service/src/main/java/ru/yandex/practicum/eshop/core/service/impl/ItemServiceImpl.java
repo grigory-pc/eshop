@@ -1,4 +1,4 @@
-package ru.yandex.practicum.eshop.core.service;
+package ru.yandex.practicum.eshop.core.service.impl;
 
 import org.springframework.web.reactive.function.client.WebClient;
 import ru.yandex.practicum.eshop.core.dto.CreatePaymentResponse;
@@ -30,9 +30,10 @@ import ru.yandex.practicum.eshop.core.enums.Sorting;
 import ru.yandex.practicum.eshop.core.exceptions.ItemNotFoundException;
 import ru.yandex.practicum.eshop.core.repository.CartItemRepository;
 import ru.yandex.practicum.eshop.core.repository.CartRepository;
-import ru.yandex.practicum.eshop.core.repository.ItemRepository;
 import ru.yandex.practicum.eshop.core.repository.OrderItemRepository;
 import ru.yandex.practicum.eshop.core.repository.OrderRepository;
+import ru.yandex.practicum.eshop.core.service.ItemHashService;
+import ru.yandex.practicum.eshop.core.service.ItemService;
 
 import static ru.yandex.practicum.eshop.core.enums.MessagesLog.MESSAGE_LOG_ADD_ITEM_TO_CART;
 import static ru.yandex.practicum.eshop.core.enums.MessagesLog.MESSAGE_LOG_DB_GET_REQUEST;
@@ -53,7 +54,7 @@ public class ItemServiceImpl implements ItemService {
   public static final String ITEM_NOT_FOUND = "Товар не найден в корзине";
   public static final String ITEM_NOT_FOUND_IN_CART = "Товар не найден в корзине";
   private final ItemMapper itemMapper;
-  private final ItemRepository itemRepository;
+  private final ItemHashService itemHashService;
   private final CartRepository cartRepository;
   private final OrderRepository orderRepository;
   private final CartItemRepository cartItemRepository;
@@ -68,38 +69,35 @@ public class ItemServiceImpl implements ItemService {
     log.info(MESSAGE_LOG_DB_GET_REQUEST.getMessage());
 
     if (search.isEmpty()) {
-      return itemRepository.findAll()
-                           .collectList()
-                           .flatMap(items -> {
-                             long total = items.size();
-                             return Mono.just(
-                                 new PageImpl<>(itemMapper.toListDto(items),
-                                                pageableItems,
-                                                total));
-                           })
-                           .onErrorResume(e -> {
-                             log.error(MESSAGE_LOG_FIND_ALL_ITEMS.getMessage(), e);
-                             return Mono.error(new DataBaseRequestException(
-                                 MESSAGE_LOG_DB_RESPONSE_ERROR.getMessage(), e));
-                           });
+      return Mono.fromCallable(() -> {
+                   List<Item> allItems = itemHashService.findAll();
 
+                   int start = pageNumber * pageSize;
+                   int end = Math.min(start + pageSize, allItems.size());
+                   List<Item> paginatedItems = allItems.subList(start, end);
+
+                   List<ItemDto> itemDtos = itemMapper.toListDto(paginatedItems);
+
+                   return new PageImpl<>(itemDtos, pageableItems, allItems.size());
+                 })
+                 .onErrorResume(e -> {
+                   log.error(MESSAGE_LOG_FIND_ALL_ITEMS.getMessage(), e);
+                   return Mono.error(new DataBaseRequestException(
+                       MESSAGE_LOG_DB_RESPONSE_ERROR.getMessage(), e));
+                 });
     } else {
-      return itemRepository.findByTitleContainingIgnoreCase(search, pageableItems)
-                           .skip((long) pageNumber * pageSize)
-                           .limitRate(pageSize)
-                           .collectList()
-                           .flatMap(items -> {
-                             long total = items.size();
-                             return Mono.just(
-                                 new PageImpl<>(itemMapper.toListDto(items),
-                                                pageableItems,
-                                                total));
-                           })
-                           .onErrorResume(e -> {
-                             log.error(MESSAGE_LOG_FIND_ALL_ITEMS.getMessage(), e);
-                             return Mono.error(new DataBaseRequestException(
-                                 MESSAGE_LOG_DB_RESPONSE_ERROR.getMessage(), e));
-                           });
+      return Mono.fromCallable(() -> {
+                   List<Item> items = itemHashService.findByTitleContainingIgnoreCase(search, pageableItems);
+                   List<ItemDto> itemDtos = itemMapper.toListDto(items);
+
+                   return new PageImpl<>(itemDtos, pageableItems, itemDtos.size());
+                 })
+                 .onErrorResume(e -> {
+                   log.error(MESSAGE_LOG_FIND_ALL_ITEMS.getMessage(), e);
+                   return Mono.error(new DataBaseRequestException(
+                       MESSAGE_LOG_DB_RESPONSE_ERROR.getMessage(), e
+                   ));
+                 });
     }
   }
 
@@ -146,14 +144,14 @@ public class ItemServiceImpl implements ItemService {
     return Mono.defer(() -> {
       log.info(MESSAGE_LOG_DB_GET_REQUEST.getMessage());
 
-      return itemRepository.findById(id)
-                           .map(itemMapper::toDto)
-                           .switchIfEmpty(Mono.error(new ItemNotFoundException("Товар не найден")))
-                           .onErrorResume(e -> {
-                             log.error(MESSAGE_LOG_FIND_ITEM.getMessage(), e);
-                             return Mono.error(new DataBaseRequestException(
-                                 MESSAGE_LOG_DB_RESPONSE_ERROR.getMessage(), e));
-                           });
+      return itemHashService.findById(id)
+                            .map(itemMapper::toDto)
+                            .switchIfEmpty(Mono.error(new ItemNotFoundException("Товар не найден")))
+                            .onErrorResume(e -> {
+                              log.error(MESSAGE_LOG_FIND_ITEM.getMessage(), e);
+                              return Mono.error(new DataBaseRequestException(
+                                  MESSAGE_LOG_DB_RESPONSE_ERROR.getMessage(), e));
+                            });
     });
   }
 
@@ -217,14 +215,14 @@ public class ItemServiceImpl implements ItemService {
   }
 
   private Flux<Item> getItemsFromOrder(Map<Long, Integer> orderItemCounts) {
-    return itemRepository.findAllById(orderItemCounts.keySet())
-                         .map(item -> {
-                           Integer countFromOrder = orderItemCounts.get(item.getId());
-                           if (countFromOrder != null) {
-                             item.setCount(countFromOrder);
-                           }
-                           return item;
-                         });
+    return itemHashService.findAllByIds(orderItemCounts.keySet())
+                          .map(item -> {
+                            Integer countFromOrder = orderItemCounts.get(item.getId());
+                            if (countFromOrder != null) {
+                              item.setCount(countFromOrder);
+                            }
+                            return item;
+                          });
   }
 
   private Mono<Map<Long, Integer>> getItemsCountFromOrderItems(Long id) {
@@ -257,7 +255,7 @@ public class ItemServiceImpl implements ItemService {
                                cartItem.setCount(cartItem.getCount() + 1);
                                return cartItemRepository.save(cartItem);
                              }).orElseGet(Mono::empty))
-                             .then(itemRepository.incrementCount(itemId))
+                             .then(itemHashService.incrementCount(itemId))
                              .then(updateCartTotal(existingCart))
                              .onErrorResume(e -> {
                                log.error(MESSAGE_LOG_ADD_ITEM_TO_CART.getMessage(), e);
@@ -281,7 +279,7 @@ public class ItemServiceImpl implements ItemService {
                                if (cartItem.getCount() > 1) {
                                  cartItem.setCount(cartItem.getCount() - 1);
                                  return cartItemRepository.save(cartItem)
-                                                          .then(itemRepository.decrementCount(
+                                                          .then(itemHashService.decrementCount(
                                                               itemId));
                                } else {
                                  return cartItemRepository.delete(cartItem);
@@ -305,9 +303,9 @@ public class ItemServiceImpl implements ItemService {
 
   private Mono<Double> calculateTotal() {
     return cartItemRepository.findCartItemsByCartId(CART_ID)
-                             .flatMap(cartItem -> itemRepository.findById(cartItem.getItemId())
-                                                                .map(item -> item.getPrice()
-                                                                             * cartItem.getCount()))
+                             .flatMap(cartItem -> itemHashService.findById(cartItem.getItemId())
+                                                                 .map(item -> item.getPrice()
+                                                                              * cartItem.getCount()))
                              .reduce(0.0, Double::sum)
                              .onErrorResume(e -> {
                                log.error(MESSAGE_LOG_FIND_CARTITEM.getMessage(), e);
@@ -320,8 +318,8 @@ public class ItemServiceImpl implements ItemService {
     return cartItemRepository.findCartItemsByCartId(CART_ID)
                              .map(CartItem::getItemId)
                              .collectList()
-                             .flatMap(ids -> itemRepository.findAllById(ids)
-                                                           .collectList())
+                             .flatMap(ids -> itemHashService.findAllByIds(ids)
+                                                            .collectList())
                              .onErrorResume(e -> {
                                log.error(MESSAGE_LOG_FIND_ITEM_OR_CARTITEM.getMessage(), e);
                                return Mono.error(new DataBaseRequestException(
