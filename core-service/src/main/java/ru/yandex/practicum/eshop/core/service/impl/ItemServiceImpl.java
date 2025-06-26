@@ -69,35 +69,38 @@ public class ItemServiceImpl implements ItemService {
     log.info(MESSAGE_LOG_DB_GET_REQUEST.getMessage());
 
     if (search.isEmpty()) {
-      return Mono.fromCallable(() -> {
-                   List<Item> allItems = itemHashService.findAll();
+      return itemHashService.findAll(pageableItems)
+                            .collectList()
+                            .flatMap(items -> {
+                             long total = items.size();
+                             return Mono.just(
+                                 new PageImpl<>(itemMapper.toListDto(items),
+                                                pageableItems,
+                                                total));
+                           })
+                            .onErrorResume(e -> {
+                             log.error(MESSAGE_LOG_FIND_ALL_ITEMS.getMessage(), e);
+                             return Mono.error(new DataBaseRequestException(
+                                 MESSAGE_LOG_DB_RESPONSE_ERROR.getMessage(), e));
+                           });
 
-                   int start = pageNumber * pageSize;
-                   int end = Math.min(start + pageSize, allItems.size());
-                   List<Item> paginatedItems = allItems.subList(start, end);
-
-                   List<ItemDto> itemDtos = itemMapper.toListDto(paginatedItems);
-
-                   return new PageImpl<>(itemDtos, pageableItems, allItems.size());
-                 })
-                 .onErrorResume(e -> {
-                   log.error(MESSAGE_LOG_FIND_ALL_ITEMS.getMessage(), e);
-                   return Mono.error(new DataBaseRequestException(
-                       MESSAGE_LOG_DB_RESPONSE_ERROR.getMessage(), e));
-                 });
     } else {
-      return Mono.fromCallable(() -> {
-                   List<Item> items = itemHashService.findByTitleContainingIgnoreCase(search, pageableItems);
-                   List<ItemDto> itemDtos = itemMapper.toListDto(items);
-
-                   return new PageImpl<>(itemDtos, pageableItems, itemDtos.size());
-                 })
-                 .onErrorResume(e -> {
-                   log.error(MESSAGE_LOG_FIND_ALL_ITEMS.getMessage(), e);
-                   return Mono.error(new DataBaseRequestException(
-                       MESSAGE_LOG_DB_RESPONSE_ERROR.getMessage(), e
-                   ));
-                 });
+      return itemHashService.findByTitleContainingIgnoreCase(search, pageableItems)
+                            .skip((long) pageNumber * pageSize)
+                            .limitRate(pageSize)
+                            .collectList()
+                            .flatMap(items -> {
+                             long total = items.size();
+                             return Mono.just(
+                                 new PageImpl<>(itemMapper.toListDto(items),
+                                                pageableItems,
+                                                total));
+                           })
+                            .onErrorResume(e -> {
+                             log.error(MESSAGE_LOG_FIND_ALL_ITEMS.getMessage(), e);
+                             return Mono.error(new DataBaseRequestException(
+                                 MESSAGE_LOG_DB_RESPONSE_ERROR.getMessage(), e));
+                           });
     }
   }
 
@@ -148,10 +151,10 @@ public class ItemServiceImpl implements ItemService {
                             .map(itemMapper::toDto)
                             .switchIfEmpty(Mono.error(new ItemNotFoundException("Товар не найден")))
                             .onErrorResume(e -> {
-                              log.error(MESSAGE_LOG_FIND_ITEM.getMessage(), e);
-                              return Mono.error(new DataBaseRequestException(
-                                  MESSAGE_LOG_DB_RESPONSE_ERROR.getMessage(), e));
-                            });
+                             log.error(MESSAGE_LOG_FIND_ITEM.getMessage(), e);
+                             return Mono.error(new DataBaseRequestException(
+                                 MESSAGE_LOG_DB_RESPONSE_ERROR.getMessage(), e));
+                           });
     });
   }
 
@@ -217,12 +220,12 @@ public class ItemServiceImpl implements ItemService {
   private Flux<Item> getItemsFromOrder(Map<Long, Integer> orderItemCounts) {
     return itemHashService.findAllByIds(orderItemCounts.keySet())
                           .map(item -> {
-                            Integer countFromOrder = orderItemCounts.get(item.getId());
-                            if (countFromOrder != null) {
-                              item.setCount(countFromOrder);
-                            }
-                            return item;
-                          });
+                           Integer countFromOrder = orderItemCounts.get(item.getId());
+                           if (countFromOrder != null) {
+                             item.setCount(countFromOrder);
+                           }
+                           return item;
+                         });
   }
 
   private Mono<Map<Long, Integer>> getItemsCountFromOrderItems(Long id) {
@@ -305,7 +308,7 @@ public class ItemServiceImpl implements ItemService {
     return cartItemRepository.findCartItemsByCartId(CART_ID)
                              .flatMap(cartItem -> itemHashService.findById(cartItem.getItemId())
                                                                  .map(item -> item.getPrice()
-                                                                              * cartItem.getCount()))
+                                                                             * cartItem.getCount()))
                              .reduce(0.0, Double::sum)
                              .onErrorResume(e -> {
                                log.error(MESSAGE_LOG_FIND_CARTITEM.getMessage(), e);

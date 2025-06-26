@@ -39,7 +39,7 @@ public class DataLoader implements ApplicationRunner {
   private final ConnectionFactory connectionFactory;
   private final ResourceLoader resourceLoader;
   private final CartRepository cartRepository;
-  private final RedisTemplate<String, String> redisTemplate;
+  private final RedisTemplate redisTemplate;
 
   @Override
   public void run(ApplicationArguments args) {
@@ -80,7 +80,7 @@ public class DataLoader implements ApplicationRunner {
 
     cartRepository.save(newCart)
                   .doOnNext(cart -> log.info("Сохранена корзина с ID: " + cart.getId()))
-                  .subscribe(System.out::println);
+                  .subscribe(cart -> log.info(cart.toString()));
     //
     //    itemRepository.saveAll(List.of(shorts, sunglasses, tShirt))
     //                  .doOnNext(item -> System.out.println(

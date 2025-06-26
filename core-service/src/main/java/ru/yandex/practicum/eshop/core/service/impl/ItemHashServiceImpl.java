@@ -1,15 +1,14 @@
 package ru.yandex.practicum.eshop.core.service.impl;
 
-import java.util.ArrayList;
-import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.Pageable;
-import org.springframework.data.redis.core.HashOperations;
 import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.stereotype.Service;
+import reactor.core.publisher.Flux;
+import reactor.core.publisher.Mono;
 import ru.yandex.practicum.eshop.core.entity.Item;
 import ru.yandex.practicum.eshop.core.service.ItemHashService;
 
@@ -17,83 +16,66 @@ import ru.yandex.practicum.eshop.core.service.ItemHashService;
 @Service
 @RequiredArgsConstructor
 public class ItemHashServiceImpl implements ItemHashService {
-  private static final String ITEM_KEY_PREFIX = "item";
-  private final RedisTemplate<String,String> redisTemplate;
+  private static final String ITEM_KEY_PREFIX = "item:";
+  public static final String REDIS_ITEM_FIELD_TITLE = "title";
+  public static final String REDIS_ITEM_FIELD_IMG_PATH = "imgPath";
+  public static final String REDIS_ITEM_FIELD_DESCRIPTION = "description";
+  public static final String REDIS_ITEM_FIELD_PRICE = "price";
+  public static final String REDIS_ITEM_FIELD_COUNT = "count";
+  private final RedisTemplate<String, Object> redisTemplate;
 
   @Override
-  public List<Item> findByTitleContainingIgnoreCase(String search, Pageable pageableRequest) {
-    List<Item> searchedItems = new ArrayList<>();
-
-    Set<String> keys = redisTemplate.keys(ITEM_KEY_PREFIX + "*");
-
-    for (String key : keys) {
-      HashOperations<String, Object, Object> hashOps = redisTemplate.opsForHash();
-      Map<Object, Object> itemMap = hashOps.entries(key);
-
-      String title = (String) itemMap.get("title");
-      if (title != null && title.toLowerCase().contains(search.toLowerCase())) {
-        Item item = new Item();
-        item.setTitle((String) itemMap.get("title"));
-        item.setImgPath((String) itemMap.get("imgPath"));
-        item.setDescription((String) itemMap.get("description"));
-        item.setPrice((Double) itemMap.get("price"));
-        item.setCount((Integer) itemMap.get("count"));
-
-        String idStr = key.substring(ITEM_KEY_PREFIX.length());
-        item.setId(Long.parseLong(idStr));
-
-        searchedItems.add(item);
-      }
-    }
-
-    int start = pageableRequest.getPageNumber() * pageableRequest.getPageSize();
-    int end = Math.min(start + pageableRequest.getPageSize(), searchedItems.size());
-    return searchedItems.subList(start, end);
+  public Flux<Item> findAll(Pageable pageableRequest) {
+    return Flux.fromIterable(redisTemplate.keys(ITEM_KEY_PREFIX + "*"))
+               .flatMap(key -> Flux.fromIterable(redisTemplate.opsForHash().entries(key).entrySet())
+                                   .map(entry -> convertToItem(key, entry)))
+               .skip(pageableRequest.getOffset())
+               .take(pageableRequest.getPageSize());
   }
 
   @Override
-  public void incrementCount(Long id) {
+  public Flux<Item> findByTitleContainingIgnoreCase(String search, Pageable pageableRequest) {
+    return Flux.fromIterable(redisTemplate.keys(ITEM_KEY_PREFIX + "*"))
+               .flatMap(key -> Flux.fromIterable(redisTemplate.opsForHash().entries(key).entrySet())
+                                   .map(entry -> convertToItem(key, entry))
+                                   .filter(item -> item.getTitle().toLowerCase()
+                                                       .contains(search.toLowerCase())))
+               .skip(pageableRequest.getOffset())
+               .take(pageableRequest.getPageSize());
+  }
+
+
+  @Override
+  public Mono<Void> incrementCount(Long id) {
 
   }
 
   @Override
-  public void decrementCount(Long id) {
+  public Mono<Void> decrementCount(Long id) {
 
   }
 
   @Override
-  public List<Item> findAll() {
-    List<Item> searchedItems = new ArrayList<>();
-
-    Set<String> keys = redisTemplate.keys(ITEM_KEY_PREFIX + "*");
-
-    for (String key : keys) {
-      HashOperations<String, Object, Object> hashOps = redisTemplate.opsForHash();
-      Map<Object, Object> itemMap = hashOps.entries(key);
-
-      Item item = new Item();
-      item.setTitle((String) itemMap.get("title"));
-      item.setImgPath((String) itemMap.get("imgPath"));
-      item.setDescription((String) itemMap.get("description"));
-      item.setPrice((Double) itemMap.get("price"));
-      item.setCount((Integer) itemMap.get("count"));
-
-      String idStr = key.substring(ITEM_KEY_PREFIX.length());
-      item.setId(Long.parseLong(idStr));
-
-      searchedItems.add(item);
-    }
-    return searchedItems;
-  }
-
-  @Override
-  public Item findById(Long id) {
+  public Mono<Item> findById(Long id) {
     return null;
   }
 
   @Override
-  public List<Item> findAllByIds(List<Long> ids) {
+  public Flux<Item> findAllByIds(Set<Long> ids) {
     return null;
   }
 
+  private Item convertToItem(String key, Map.Entry<Object, Object> entry) {
+    String idStr = key.substring(key.indexOf(":") + 1);
+
+    Map<String, Object> hash = (Map<String, Object>) entry.getValue();
+    return Item.builder()
+               .id(Long.parseLong(idStr))
+               .title((String) hash.get(REDIS_ITEM_FIELD_TITLE))
+               .imgPath((String) hash.get(REDIS_ITEM_FIELD_IMG_PATH))
+               .description((String) hash.get(REDIS_ITEM_FIELD_DESCRIPTION))
+               .price((Double) hash.get(REDIS_ITEM_FIELD_PRICE))
+               .count((Integer) hash.get(REDIS_ITEM_FIELD_COUNT))
+               .build();
+  }
 }
