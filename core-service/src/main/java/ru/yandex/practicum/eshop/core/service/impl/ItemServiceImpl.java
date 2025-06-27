@@ -1,5 +1,6 @@
 package ru.yandex.practicum.eshop.core.service.impl;
 
+import java.util.stream.Collectors;
 import org.springframework.web.reactive.function.client.WebClient;
 import ru.yandex.practicum.eshop.core.dto.CreatePaymentResponse;
 import ru.yandex.practicum.eshop.core.enums.Action;
@@ -320,7 +321,7 @@ public class ItemServiceImpl implements ItemService {
   private Mono<List<Item>> getItemsFromCart() {
     return cartItemRepository.findCartItemsByCartId(CART_ID)
                              .map(CartItem::getItemId)
-                             .collectList()
+                             .collect(Collectors.toSet())
                              .flatMap(ids -> itemHashService.findAllByIds(ids)
                                                             .collectList())
                              .onErrorResume(e -> {

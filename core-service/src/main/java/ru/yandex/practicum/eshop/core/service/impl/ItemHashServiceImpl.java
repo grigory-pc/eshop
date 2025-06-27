@@ -1,7 +1,9 @@
 package ru.yandex.practicum.eshop.core.service.impl;
 
+import java.util.HashMap;
 import java.util.Map;
 import java.util.Set;
+import java.util.stream.Collectors;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.Pageable;
@@ -10,7 +12,11 @@ import org.springframework.stereotype.Service;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 import ru.yandex.practicum.eshop.core.entity.Item;
+import ru.yandex.practicum.eshop.core.exceptions.DataBaseRequestException;
 import ru.yandex.practicum.eshop.core.service.ItemHashService;
+
+import static ru.yandex.practicum.eshop.core.enums.MessagesLog.MESSAGE_LOG_DB_RESPONSE_ERROR;
+import static ru.yandex.practicum.eshop.core.enums.MessagesLog.MESSAGE_LOG_FIND_ALL_ITEMS;
 
 @Slf4j
 @Service
@@ -27,31 +33,69 @@ public class ItemHashServiceImpl implements ItemHashService {
   @Override
   public Flux<Item> findAll(Pageable pageableRequest) {
     return Flux.fromIterable(redisTemplate.keys(ITEM_KEY_PREFIX + "*"))
-               .flatMap(key -> Flux.fromIterable(redisTemplate.opsForHash().entries(key).entrySet())
-                                   .map(entry -> convertToItem(key, entry)))
+               .flatMap(key -> {
+                 Map<Object, Object> rawEntries = redisTemplate.opsForHash().entries(key);
+                 Map<String, Object> entries = new HashMap<>();
+
+                 for (Map.Entry<Object, Object> entry : rawEntries.entrySet()) {
+                   if (entry.getKey() instanceof String) {
+                     entries.put((String) entry.getKey(), entry.getValue());
+                   }
+                 }
+
+                 return Flux.just(convertToItem(key, entries));
+               })
                .skip(pageableRequest.getOffset())
-               .take(pageableRequest.getPageSize());
+               .take(pageableRequest.getPageSize())
+               .onErrorResume(e -> {
+                 log.error(MESSAGE_LOG_FIND_ALL_ITEMS.getMessage(), e);
+                 return Mono.error(new DataBaseRequestException(
+                     MESSAGE_LOG_DB_RESPONSE_ERROR.getMessage(), e));
+               });
   }
 
   @Override
   public Flux<Item> findByTitleContainingIgnoreCase(String search, Pageable pageableRequest) {
     return Flux.fromIterable(redisTemplate.keys(ITEM_KEY_PREFIX + "*"))
-               .flatMap(key -> Flux.fromIterable(redisTemplate.opsForHash().entries(key).entrySet())
-                                   .map(entry -> convertToItem(key, entry))
-                                   .filter(item -> item.getTitle().toLowerCase()
-                                                       .contains(search.toLowerCase())))
+               .flatMap(key -> {
+                 Map<Object, Object> rawEntries = redisTemplate.opsForHash().entries(key);
+                 Map<String, Object> entries = rawEntries.entrySet()
+                                                         .stream()
+                                                         .filter(e -> e.getKey() instanceof String)
+                                                         .collect(Collectors.toMap(
+                                                             e -> (String) e.getKey(),
+                                                             Map.Entry::getValue
+                                                         ));
+
+                 return Flux.just(convertToItem(key, entries));
+               })
+               .filter(item -> {
+                 if (search == null || search.isEmpty()) {
+                   return true;
+                 }
+                 String searchLower = search.toLowerCase();
+                 return item.getTitle() != null
+                        && item.getTitle().toLowerCase().contains(searchLower);
+               })
                .skip(pageableRequest.getOffset())
-               .take(pageableRequest.getPageSize());
+               .take(pageableRequest.getPageSize())
+               .onErrorResume(e -> {
+                 log.error(MESSAGE_LOG_FIND_ALL_ITEMS.getMessage(), e);
+                 return Mono.error(new DataBaseRequestException(
+                     MESSAGE_LOG_DB_RESPONSE_ERROR.getMessage(), e));
+               });
   }
 
 
   @Override
   public Mono<Void> incrementCount(Long id) {
+    return null;
 
   }
 
   @Override
   public Mono<Void> decrementCount(Long id) {
+    return null;
 
   }
 
@@ -65,17 +109,16 @@ public class ItemHashServiceImpl implements ItemHashService {
     return null;
   }
 
-  private Item convertToItem(String key, Map.Entry<Object, Object> entry) {
+  private Item convertToItem(String key, Map<String, Object> entries) {
     String idStr = key.substring(key.indexOf(":") + 1);
 
-    Map<String, Object> hash = (Map<String, Object>) entry.getValue();
     return Item.builder()
                .id(Long.parseLong(idStr))
-               .title((String) hash.get(REDIS_ITEM_FIELD_TITLE))
-               .imgPath((String) hash.get(REDIS_ITEM_FIELD_IMG_PATH))
-               .description((String) hash.get(REDIS_ITEM_FIELD_DESCRIPTION))
-               .price((Double) hash.get(REDIS_ITEM_FIELD_PRICE))
-               .count((Integer) hash.get(REDIS_ITEM_FIELD_COUNT))
+               .title((String) entries.get(REDIS_ITEM_FIELD_TITLE))
+               .imgPath((String) entries.get(REDIS_ITEM_FIELD_IMG_PATH))
+               .description((String) entries.get(REDIS_ITEM_FIELD_DESCRIPTION))
+               .price((Double) entries.get(REDIS_ITEM_FIELD_PRICE))
+               .count((Integer) entries.get(REDIS_ITEM_FIELD_COUNT))
                .build();
   }
 }
