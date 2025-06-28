@@ -11,8 +11,10 @@ import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.stereotype.Service;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
+import reactor.core.scheduler.Schedulers;
 import ru.yandex.practicum.eshop.core.entity.Item;
 import ru.yandex.practicum.eshop.core.exceptions.DataBaseRequestException;
+import ru.yandex.practicum.eshop.core.exceptions.ItemNotFoundException;
 import ru.yandex.practicum.eshop.core.service.ItemHashService;
 
 import static ru.yandex.practicum.eshop.core.enums.MessagesLog.MESSAGE_LOG_DB_RESPONSE_ERROR;
@@ -86,27 +88,88 @@ public class ItemHashServiceImpl implements ItemHashService {
                });
   }
 
-
   @Override
   public Mono<Void> incrementCount(Long id) {
-    return null;
-
+    return findById(id)
+        .flatMap(item -> {
+          String key = ITEM_KEY_PREFIX + id;
+          redisTemplate.opsForHash().put(key, REDIS_ITEM_FIELD_COUNT, item.getCount() + 1);
+          return Mono.empty();
+        });
   }
 
   @Override
   public Mono<Void> decrementCount(Long id) {
-    return null;
+    return findById(id)
+        .flatMap(item -> {
+          Integer currentCount = item.getCount();
 
+          if (currentCount <= 0) {
+            return Mono.empty();
+          }
+
+          String key = ITEM_KEY_PREFIX + id;
+          redisTemplate.opsForHash().put(key, REDIS_ITEM_FIELD_COUNT, currentCount - 1);
+          return Mono.empty();
+        });
   }
 
   @Override
   public Mono<Item> findById(Long id) {
-    return null;
+    return Mono.fromCallable(() -> {
+      String key = ITEM_KEY_PREFIX + id;
+      Map<Object, Object> rawEntries = redisTemplate.opsForHash().entries(key);
+
+      Map<String, Object> entries = rawEntries.entrySet()
+                                              .stream()
+                                              .filter(e -> e.getKey() instanceof String)
+                                              .collect(Collectors.toMap(
+                                                  e -> (String) e.getKey(),
+                                                  Map.Entry::getValue
+                                              ));
+
+      if (entries.isEmpty()) {
+        throw new ItemNotFoundException(String.format("Товар с id %s не найден", id));
+      }
+
+      return convertToItem(key, entries);
+    });
   }
 
   @Override
   public Flux<Item> findAllByIds(Set<Long> ids) {
-    return null;
+    return Flux.fromIterable(ids)
+               .parallel()
+               .runOn(Schedulers.parallel())
+               .flatMap(id -> {
+                 String key = ITEM_KEY_PREFIX + ":" + id;
+
+                 return Mono.fromCallable(() -> {
+                              Map<Object, Object> rawEntries = redisTemplate.opsForHash().entries(key);
+
+                              if (rawEntries.isEmpty()) {
+                                throw new ItemNotFoundException("Item with id " + id + " not found");
+                              }
+
+                              Map<String, Object> entries = rawEntries.entrySet()
+                                                                      .stream()
+                                                                      .filter(
+                                                                          e -> e.getKey() instanceof String)
+                                                                      .collect(Collectors.toMap(
+                                                                          e -> (String) e.getKey(),
+                                                                          Map.Entry::getValue
+                                                                      ));
+
+                              return convertToItem(key, entries);
+                            })
+                            .onErrorResume(throwable -> {
+                              if (throwable instanceof ItemNotFoundException) {
+                                return Mono.empty();
+                              }
+                              return Mono.error(throwable);
+                            });
+               })
+               .sequential();
   }
 
   private Item convertToItem(String key, Map<String, Object> entries) {
