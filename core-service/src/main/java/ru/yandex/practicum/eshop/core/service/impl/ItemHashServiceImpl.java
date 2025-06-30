@@ -142,13 +142,15 @@ public class ItemHashServiceImpl implements ItemHashService {
                .parallel()
                .runOn(Schedulers.parallel())
                .flatMap(id -> {
-                 String key = ITEM_KEY_PREFIX + ":" + id;
+                 log.info(String.format("Поиск товара в Redis с id %s", id));
+
+                 String key = ITEM_KEY_PREFIX + id;
 
                  return Mono.fromCallable(() -> {
                               Map<Object, Object> rawEntries = redisTemplate.opsForHash().entries(key);
 
                               if (rawEntries.isEmpty()) {
-                                throw new ItemNotFoundException("Item with id " + id + " not found");
+                                throw new ItemNotFoundException(String.format("Товар с id %s не найден", id));
                               }
 
                               Map<String, Object> entries = rawEntries.entrySet()
@@ -174,6 +176,8 @@ public class ItemHashServiceImpl implements ItemHashService {
 
   private Item convertToItem(String key, Map<String, Object> entries) {
     String idStr = key.substring(key.indexOf(":") + 1);
+
+    log.info(String.format("Получение объекта товара для ключа: %s", key));
 
     return Item.builder()
                .id(Long.parseLong(idStr))

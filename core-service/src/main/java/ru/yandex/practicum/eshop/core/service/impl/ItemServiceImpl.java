@@ -136,7 +136,7 @@ public class ItemServiceImpl implements ItemService {
                           .build();
           })
           .onErrorResume(e -> {
-            log.error(MESSAGE_LOG_DB_RESPONSE_ERROR.getMessage(), e);
+            log.error(MESSAGE_LOG_FIND_CARTITEM.getMessage(), e);
             return Mono.error(
                 new DataBaseRequestException(MESSAGE_LOG_DB_RESPONSE_ERROR.getMessage(), e));
           });

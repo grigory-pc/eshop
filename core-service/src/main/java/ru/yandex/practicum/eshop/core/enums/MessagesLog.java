@@ -17,7 +17,7 @@ public enum MessagesLog {
   MESSAGE_LOG_SAVE_CART("Ошибка БД при попытке сохранения корзины"),
   MESSAGE_LOG_FIND_CARTITEM("Ошибка БД при попытке поиска соотношения товара и корзины"),
   MESSAGE_LOG_FIND_ITEM_OR_CARTITEM("Ошибка БД при попытке поиска товара или соотношения товара и корзины"),
-  MESSAGE_LOG_FIND_ALL_ITEMS("Очистка корзины и количества товаров успешно выполнена"),
+  MESSAGE_LOG_FIND_ALL_ITEMS("Ошибка БД при попытке поиска всех товаров"),
   MESSAGE_LOG_FIND_ITEM("Ошибка БД при попытке поиска товара");
 
   private final String message;
