@@ -52,7 +52,6 @@
 //        });
 //  }
 //
-//
 //  @AfterEach
 //  void flushData() {
 //    String updateCartSql = "UPDATE carts SET total = $1 WHERE id = $2";
