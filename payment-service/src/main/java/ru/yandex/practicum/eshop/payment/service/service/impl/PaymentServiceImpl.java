@@ -1,4 +1,4 @@
-package ru.yandex.practicum.eshop.payment.service.service;
+package ru.yandex.practicum.eshop.payment.service.service.impl;
 
 import java.util.List;
 import lombok.RequiredArgsConstructor;
@@ -16,9 +16,10 @@ import ru.yandex.practicum.eshop.payment.service.entity.Orders;
 import ru.yandex.practicum.eshop.payment.service.exceptions.DataBaseRequestException;
 import ru.yandex.practicum.eshop.payment.service.repository.CartItemRepository;
 import ru.yandex.practicum.eshop.payment.service.repository.CartRepository;
-import ru.yandex.practicum.eshop.payment.service.repository.ItemRepository;
 import ru.yandex.practicum.eshop.payment.service.repository.OrderItemRepository;
 import ru.yandex.practicum.eshop.payment.service.repository.OrderRepository;
+import ru.yandex.practicum.eshop.payment.service.service.ItemHashService;
+import ru.yandex.practicum.eshop.payment.service.service.PaymentService;
 
 import static ru.yandex.practicum.eshop.payment.service.enums.MessagesLog.MESSAGE_LOG_DB_RESPONSE_ERROR;
 import static ru.yandex.practicum.eshop.payment.service.enums.MessagesLog.MESSAGE_LOG_DB_SAVE_REQUEST;
@@ -30,7 +31,7 @@ import static ru.yandex.practicum.eshop.payment.service.enums.MessagesLog.MESSAG
 @RequiredArgsConstructor
 public class PaymentServiceImpl implements PaymentService {
   private static final Double TOTAL_INIT = 0.00;
-  private final ItemRepository itemRepository;
+  private final ItemHashService itemHashService;
   private final CartRepository cartRepository;
   private final OrderRepository orderRepository;
   private final CartItemRepository cartItemRepository;
@@ -62,7 +63,7 @@ public class PaymentServiceImpl implements PaymentService {
       Cart cart = new Cart(cartId, TOTAL_INIT);
       return cartRepository.save(cart)
                            .then(cartItemRepository.deleteAllByCartId(cartId))
-                           .then(itemRepository.updateAllCountToZero())
+                           .then(itemHashService.updateAllCountToZero())
                            .doOnSuccess(v -> log.info(MESSAGE_LOG_FLUSH_CART_SUCCESS.getMessage()))
                            .thenReturn(orders)
                            .onErrorResume(e -> {
@@ -102,8 +103,8 @@ public class PaymentServiceImpl implements PaymentService {
     List<CartItem> cartItems = orderAndCartItems.getT2();
 
     return Flux.fromIterable(cartItems)
-               .flatMap(cartItem -> itemRepository.findById(cartItem.getItemId())
-                                                  .map(item -> createOrderItem(orders, item,
+               .flatMap(cartItem -> itemHashService.findById(cartItem.getItemId())
+                                                   .map(item -> createOrderItem(orders, item,
                                                                                cartItem.getCount())))
                .collectList()
                .flatMap(orderItems -> orderItemRepository.saveAll(orderItems)
