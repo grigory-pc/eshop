@@ -1,4 +1,4 @@
-package ru.yandex.practicum.eshop.payment.service.service.impl;
+package ru.yandex.practicum.eshop.payment.service.repository;
 
 import java.util.Map;
 import java.util.Set;
@@ -10,7 +10,6 @@ import org.springframework.stereotype.Service;
 import reactor.core.publisher.Mono;
 import ru.yandex.practicum.eshop.payment.service.entity.Item;
 import ru.yandex.practicum.eshop.payment.service.exceptions.ItemNotFoundException;
-import ru.yandex.practicum.eshop.payment.service.service.ItemHashService;
 
 @Slf4j
 @Service

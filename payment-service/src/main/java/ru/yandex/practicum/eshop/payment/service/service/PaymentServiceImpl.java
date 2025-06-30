@@ -1,4 +1,4 @@
-package ru.yandex.practicum.eshop.payment.service.service.impl;
+package ru.yandex.practicum.eshop.payment.service.service;
 
 import java.util.List;
 import lombok.RequiredArgsConstructor;
@@ -18,8 +18,7 @@ import ru.yandex.practicum.eshop.payment.service.repository.CartItemRepository;
 import ru.yandex.practicum.eshop.payment.service.repository.CartRepository;
 import ru.yandex.practicum.eshop.payment.service.repository.OrderItemRepository;
 import ru.yandex.practicum.eshop.payment.service.repository.OrderRepository;
-import ru.yandex.practicum.eshop.payment.service.service.ItemHashService;
-import ru.yandex.practicum.eshop.payment.service.service.PaymentService;
+import ru.yandex.practicum.eshop.payment.service.repository.ItemHashService;
 
 import static ru.yandex.practicum.eshop.payment.service.enums.MessagesLog.MESSAGE_LOG_DB_RESPONSE_ERROR;
 import static ru.yandex.practicum.eshop.payment.service.enums.MessagesLog.MESSAGE_LOG_DB_SAVE_REQUEST;

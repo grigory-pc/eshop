@@ -1,4 +1,4 @@
-package ru.yandex.practicum.eshop.core.service;
+package ru.yandex.practicum.eshop.core.repository;
 
 import java.util.Set;
 import org.springframework.data.domain.Pageable;

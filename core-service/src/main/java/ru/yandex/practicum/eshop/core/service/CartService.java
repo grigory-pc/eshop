@@ -1,0 +1,34 @@
+package ru.yandex.practicum.eshop.core.service;
+
+import ch.qos.logback.core.joran.spi.ActionException;
+import reactor.core.publisher.Mono;
+import ru.yandex.practicum.eshop.core.dto.CartDto;
+
+/**
+ * Сервис для работы с корзиной.
+ */
+public interface CartService {
+  /**
+   * Изменение состава корзины товаров.
+   *
+   * @param itemId - id товара.
+   * @param action - действие с товаром в корзине.
+   *
+   * @throws ch.qos.logback.core.joran.spi.ActionException - исключение в случае некорректного значения в запросе для action.
+   */
+  Mono<Void> editCart(Long itemId, String action) throws ActionException;
+
+  /**
+   * Получение всех товаров корзины.
+   *
+   * @return список товаров в корзине.
+   */
+  Mono<CartDto> getCartItems();
+
+  /**
+   * Формирование заказа для товаров в корзине.
+   *
+   * @return id заказа.
+   */
+  Mono<Long> buyItems();
+}

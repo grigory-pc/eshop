@@ -12,7 +12,7 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.server.ResponseStatusException;
 import reactor.core.publisher.Mono;
-import ru.yandex.practicum.eshop.core.service.ItemService;
+import ru.yandex.practicum.eshop.core.service.OrderService;
 
 /**
  * Контроллер обрабатывает запросы относительно заказов.
@@ -23,7 +23,7 @@ import ru.yandex.practicum.eshop.core.service.ItemService;
 @RequestMapping("/orders")
 
 public class OrderController {
-  private final ItemService itemService;
+  private final OrderService orderService;
 
   /**
    * Обрабатывает GET-запросы на получение списка заказов.
@@ -35,15 +35,15 @@ public class OrderController {
   public Mono<String> getOrders(Model model) {
     return Mono.just(model)
                .doOnNext(m -> log.info("Получен запрос на получение списка заказов"))
-               .flatMap(m -> itemService.getOrders()
-                                        .doOnNext(order -> log.info("Получен список заказов"))
-                                        .doOnComplete(
+               .flatMap(m -> orderService.getOrders()
+                                         .doOnNext(order -> log.info("Получен список заказов"))
+                                         .doOnComplete(
                                             () -> log.info("Завершено получение списка заказов"))
-                                        .collectList()
-                                        .doOnNext(
+                                         .collectList()
+                                         .doOnNext(
                                             list -> log.info("Получен список заказов размером: {}",
                                                              list.size()))
-                                        .flatMap(orders -> {
+                                         .flatMap(orders -> {
                                           m.addAttribute("orders", orders);
                                           return Mono.just(m);
                                         })
@@ -66,10 +66,10 @@ public class OrderController {
     return Mono.just(model)
                .doOnNext(
                    m -> log.info("Получен запрос на получение карточки заказа для id = {}", id))
-               .flatMap(m -> itemService.getOrderItems(id)
-                                        .doOnNext(order -> log.info(
+               .flatMap(m -> orderService.getOrderItems(id)
+                                         .doOnNext(order -> log.info(
                                             "Из базы данных получен объект товара с id: {}", id))
-                                        .flatMap(order -> {
+                                         .flatMap(order -> {
                                           m.addAttribute("order", order);
                                           m.addAttribute("newOrder", newOrder);
                                           return Mono.just(m);

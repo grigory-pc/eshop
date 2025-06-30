@@ -1,4 +1,4 @@
-package ru.yandex.practicum.eshop.core.service.impl;
+package ru.yandex.practicum.eshop.core.repository;
 
 import java.util.HashMap;
 import java.util.Map;
@@ -15,7 +15,6 @@ import reactor.core.scheduler.Schedulers;
 import ru.yandex.practicum.eshop.core.entity.Item;
 import ru.yandex.practicum.eshop.core.exceptions.DataBaseRequestException;
 import ru.yandex.practicum.eshop.core.exceptions.ItemNotFoundException;
-import ru.yandex.practicum.eshop.core.service.ItemHashService;
 
 import static ru.yandex.practicum.eshop.core.enums.MessagesLog.MESSAGE_LOG_DB_RESPONSE_ERROR;
 import static ru.yandex.practicum.eshop.core.enums.MessagesLog.MESSAGE_LOG_FIND_ALL_ITEMS;

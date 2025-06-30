@@ -1,4 +1,4 @@
-package ru.yandex.practicum.eshop.payment.service.service;
+package ru.yandex.practicum.eshop.payment.service.repository;
 
 import reactor.core.publisher.Mono;
 import ru.yandex.practicum.eshop.payment.service.entity.Item;

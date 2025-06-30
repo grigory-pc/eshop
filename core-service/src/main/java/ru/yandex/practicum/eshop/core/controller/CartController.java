@@ -13,7 +13,7 @@ import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.servlet.mvc.support.RedirectAttributes;
 import reactor.core.publisher.Mono;
-import ru.yandex.practicum.eshop.core.service.ItemService;
+import ru.yandex.practicum.eshop.core.service.CartService;
 
 /**
  * Контроллер обрабатывает запросы относительно корзины.
@@ -24,7 +24,7 @@ import ru.yandex.practicum.eshop.core.service.ItemService;
 public class CartController {
   public static final String REDIRECT_CART = "redirect:/cart/items";
   public static final String REDIRECT_ORDERS = "redirect:/orders";
-  private final ItemService itemService;
+  private final CartService cartService;
 
   /**
    * Обрабатывает GET-запросы на получение списка товаров в корзине.
@@ -36,7 +36,7 @@ public class CartController {
   public Mono<String> getCartItems(Model model) {
     return Mono.just(model)
                .doOnNext(m -> log.info("Получен запрос на получение списка товаров в корзине"))
-               .flatMap(m -> itemService.getCartItems()
+               .flatMap(m -> cartService.getCartItems()
                                         .doOnNext(dto -> log.info(
                                             "Получен список товаров в корзине размером: {}",
                                             dto.items().size()))
@@ -67,7 +67,7 @@ public class CartController {
 
     log.info("Получен запрос на изменение корзины: {} для товара id = {}", action, itemId);
 
-    return itemService.editCart(itemId, action)
+    return cartService.editCart(itemId, action)
                       .then(Mono.just(REDIRECT_CART));
   }
 
@@ -80,7 +80,7 @@ public class CartController {
   public Mono<String> buyItems(RedirectAttributes redirectAttributes) {
     log.info("Получен запрос на покупку товаров в корзине");
 
-    return itemService.buyItems()
+    return cartService.buyItems()
                       .doOnNext(orderId -> {
                         log.info("Создан новый заказ = {}", orderId);
                         redirectAttributes.addAttribute("orderId", orderId);

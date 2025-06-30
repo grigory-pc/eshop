@@ -12,6 +12,7 @@ import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import reactor.core.publisher.Mono;
+import ru.yandex.practicum.eshop.core.service.CartService;
 import ru.yandex.practicum.eshop.core.service.ItemService;
 
 /**
@@ -24,6 +25,7 @@ import ru.yandex.practicum.eshop.core.service.ItemService;
 public class ItemController {
   public static final String REDIRECT_ITEMS = "redirect:/items/";
   private final ItemService itemService;
+  private final CartService cartService;
 
   /**
    * Обрабатывает GET-запросы на получение карточки товара по id.
@@ -59,7 +61,7 @@ public class ItemController {
              action, id);
 
 
-    return itemService.editCart(id, action)
+    return cartService.editCart(id, action)
                       .then(Mono.just(REDIRECT_ITEMS + id));
   }
 }

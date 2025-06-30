@@ -15,6 +15,7 @@ import org.springframework.web.servlet.view.RedirectView;
 import reactor.core.publisher.Mono;
 import ru.yandex.practicum.eshop.core.dto.PagingDto;
 import ru.yandex.practicum.eshop.core.enums.Sorting;
+import ru.yandex.practicum.eshop.core.service.CartService;
 import ru.yandex.practicum.eshop.core.service.ItemService;
 
 /**
@@ -26,6 +27,7 @@ import ru.yandex.practicum.eshop.core.service.ItemService;
 public class MainController {
   public static final String REDIRECT_MAIN = "redirect:/main/items";
   private final ItemService itemService;
+  private final CartService cartService;
 
   /**
    * Перенаправление запросов с "/" на "/main/items".
@@ -92,7 +94,7 @@ public class MainController {
 
     log.info("Получен запрос на изменение корзины: {} для товара id = {}", action, itemId);
 
-    return itemService.editCart(itemId, action)
+    return cartService.editCart(itemId, action)
                       .then(Mono.just(REDIRECT_MAIN));
   }
 }
