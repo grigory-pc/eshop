@@ -38,12 +38,6 @@ build/
 ### Mac OS ###
 .DS_Store
 
-# Vaadin
-.frontend-cache/
-.flow/
-frontend-generated/
-node_modules/
-
 # Дополнительные файлы
 *.class
 *.log

@@ -1,0 +1,36 @@
+openapi: 3.0.1
+info:
+  version: "1.0.0"
+  title: Контроллер сервиса платежей
+  description: API для обработки платежей
+servers:
+  - url: http://payment-service/
+    description: Сервис платежей
+paths:
+  /buy:
+    post:
+      summary: Создание платежа по ID корзины
+      operationId: createPaymentByCartId
+      parameters:
+        - name: cartId
+          in: query
+          required: true
+          schema:
+            type: integer
+            format: int64
+      responses:
+        '200':
+          description: Заказ успешно создан
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CreatePaymentResponse'
+components:
+  schemas:
+    CreatePaymentResponse:
+      type: object
+      properties:
+        orderId:
+          type: integer
+          format: int64
+          description: ID созданного заказа
