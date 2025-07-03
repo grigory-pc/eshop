@@ -29,11 +29,12 @@ public class SecurityConfig {
             .logoutUrl("/logout")
             .logoutSuccessHandler((exchange, authentication) ->
                                       exchange.getExchange().getSession()
-                                              .flatMap(WebSession::invalidate) // удаляем сессию
-                                              .then(Mono.fromRunnable(() -> {
-                                                exchange.getExchange().getResponse()
-                                                        .setStatusCode(HttpStatus.OK); // отвечаем 200 OK
-                                              }))
+                                              .flatMap(WebSession::invalidate)
+                                              .then(Mono.fromRunnable(() ->
+                                                                          exchange.getExchange()
+                                                                                  .getResponse()
+                                                                                  .setStatusCode(
+                                                                                      HttpStatus.OK)))
             )
         )
         .build();
