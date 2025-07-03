@@ -4,19 +4,24 @@ import io.r2dbc.spi.ConnectionFactory;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.util.List;
 import java.util.Map;
 import org.springframework.boot.ApplicationArguments;
 import org.springframework.boot.ApplicationRunner;
 import org.springframework.core.io.ResourceLoader;
 import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.r2dbc.core.DatabaseClient;
+import org.springframework.security.crypto.password.PasswordEncoder;
+import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 import ru.yandex.practicum.eshop.core.entity.Cart;
 import ru.yandex.practicum.eshop.core.entity.Item;
+import ru.yandex.practicum.eshop.core.entity.User;
 import ru.yandex.practicum.eshop.core.repository.CartRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
+import ru.yandex.practicum.eshop.core.repository.UserRepository;
 
 /**
  * Класс для загрузки данных в БД при запуске приложения.
@@ -40,6 +45,8 @@ public class DataLoader implements ApplicationRunner {
   private final ResourceLoader resourceLoader;
   private final CartRepository cartRepository;
   private final RedisTemplate<String, Object> redisTemplate;
+  private final UserRepository userRepository;
+  private final PasswordEncoder passwordEncoder;
 
   @Override
   public void run(ApplicationArguments args) {
@@ -49,7 +56,23 @@ public class DataLoader implements ApplicationRunner {
       log.error("Не удалось запустить стартовый SQL-скрипт");
       throw new RuntimeException(e);
     }
+    addItems();
+    addCart();
+    addUsers();
+  }
 
+  private Mono<Void> executeSqlScript(String scriptPath) throws IOException {
+    Path path = resourceLoader.getResource(scriptPath).getFile().toPath();
+    String sql = Files.readString(path);
+
+    return DatabaseClient.create(connectionFactory)
+                         .sql(sql)
+                         .fetch()
+                         .rowsUpdated()
+                         .then();
+  }
+
+  private void addItems() {
     Item shorts = Item.builder()
                       .title("Шорты")
                       .imgPath(ITEM_SHORTS_IMG_PATH)
@@ -73,14 +96,6 @@ public class DataLoader implements ApplicationRunner {
                       .price(567.99)
                       .count(0)
                       .build();
-
-    Cart newCart = Cart.builder()
-                       .total(TOTAL_INIT)
-                       .build();
-
-    cartRepository.save(newCart)
-                  .doOnNext(cart -> log.info("Сохранена корзина с ID: " + cart.getId()))
-                  .subscribe(cart -> log.info(cart.toString()));
 
     redisTemplate.opsForHash().putAll(REDIS_KEY_ITEM + ":1",
                                       Map.of(
@@ -113,14 +128,24 @@ public class DataLoader implements ApplicationRunner {
     );
   }
 
-  private Mono<Void> executeSqlScript(String scriptPath) throws IOException {
-    Path path = resourceLoader.getResource(scriptPath).getFile().toPath();
-    String sql = Files.readString(path);
+  private void addCart() {
+    Cart newCart = Cart.builder()
+                       .total(TOTAL_INIT)
+                       .build();
 
-    return DatabaseClient.create(connectionFactory)
-                         .sql(sql)
-                         .fetch()
-                         .rowsUpdated()
-                         .then();
+    cartRepository.save(newCart)
+                  .doOnNext(cart -> log.info("Сохранена корзина с ID: " + cart.getId()))
+                  .subscribe(cart -> log.info(cart.toString()));
+  }
+
+  private void addUsers() {
+    List<User> users = List.of(
+        new User(1L, "user1", passwordEncoder.encode("password"), "ROLE_USER"),
+        new User(2L, "user2", passwordEncoder.encode("password"), "ROLE_USER"));
+
+    userRepository.deleteAll()
+                  .thenMany(Flux.fromIterable(users))
+                  .flatMap(userRepository::save)
+                  .subscribe();
   }
 }
