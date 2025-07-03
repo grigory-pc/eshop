@@ -7,7 +7,7 @@ import org.springframework.http.HttpStatus;
 import org.springframework.security.config.annotation.web.reactive.EnableWebFluxSecurity;
 import org.springframework.security.config.web.server.ServerHttpSecurity;
 import org.springframework.security.web.server.SecurityWebFilterChain;
-import org.springframework.web.server.ServerWebExchange;
+import org.springframework.web.server.WebSession;
 import reactor.core.publisher.Mono;
 
 import static org.springframework.security.config.Customizer.withDefaults;
@@ -27,8 +27,13 @@ public class SecurityConfig {
         .authorizeExchange(exchanges -> exchanges.anyExchange().authenticated())
         .logout(logout -> logout
             .logoutUrl("/logout")
-            .logoutSuccessHandler((webFilterExchange, authentication) ->
-                                      invalidateSession(webFilterExchange.getExchange())
+            .logoutSuccessHandler((exchange, authentication) ->
+                                      exchange.getExchange().getSession()
+                                              .flatMap(WebSession::invalidate) // удаляем сессию
+                                              .then(Mono.fromRunnable(() -> {
+                                                exchange.getExchange().getResponse()
+                                                        .setStatusCode(HttpStatus.OK); // отвечаем 200 OK
+                                              }))
             )
         )
         .build();
@@ -42,23 +47,5 @@ public class SecurityConfig {
             .anyExchange().authenticated()
         )
         .build();
-  }
-
-  private Mono<Void> invalidateSession(ServerWebExchange exchange) {
-    return exchange.getSession()
-                   .flatMap(session -> session.invalidate()
-                                              .then(Mono.fromRunnable(() -> {
-                                                exchange.getResponse().setStatusCode(HttpStatus.OK);
-                                                exchange.getResponse().getCookies()
-                                                        .remove("SESSION");
-                                              }))
-                                              .onErrorMap(e -> {
-                                                log.error("Ошибка при удалении сессии", e);
-                                                return e;
-                                              }))
-                   .onErrorResume(error -> {
-                     log.error("Ошибка при обработке сессии", error);
-                     return Mono.empty();
-                   }).then();
   }
 }
