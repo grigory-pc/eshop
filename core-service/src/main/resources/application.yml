@@ -2,6 +2,8 @@ server:
   port: 8080
 
 spring:
+  main:
+    allow-bean-definition-overriding: true
   r2dbc:
     url: r2dbc:postgresql://localhost:5432/eshop-db              # URL подключения к базе данных
     username: postgres    # Имя пользователя базы данных

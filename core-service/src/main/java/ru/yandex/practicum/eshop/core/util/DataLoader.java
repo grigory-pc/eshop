@@ -126,6 +126,8 @@ public class DataLoader implements ApplicationRunner {
                                           REDIS_ITEM_FIELD_COUNT, tShirt.getCount()
                                       )
     );
+
+    log.info("Товары добавлены в кэш");
   }
 
   private void addCart() {
@@ -139,13 +141,24 @@ public class DataLoader implements ApplicationRunner {
   }
 
   private void addUsers() {
-    List<User> users = List.of(
-        new User(1L, "user1", passwordEncoder.encode("password"), "ROLE_USER"),
-        new User(2L, "user2", passwordEncoder.encode("password"), "ROLE_USER"));
+    User user1 = User.builder()
+                     .username("user1")
+                     .password(passwordEncoder.encode("password"))
+                     .role("ROLE_USER")
+                     .build();
+    User user2 = User.builder()
+                     .username("user2")
+                     .password(passwordEncoder.encode("password"))
+                     .role("ROLE_USER")
+                     .build();
+
+    List<User> users = List.of(user1, user2);
 
     userRepository.deleteAll()
                   .thenMany(Flux.fromIterable(users))
                   .flatMap(userRepository::save)
                   .subscribe();
+
+    log.info("Пользователи добавлены в базу");
   }
 }
