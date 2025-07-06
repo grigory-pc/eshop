@@ -1,6 +1,7 @@
 package ru.yandex.practicum.eshop.core.controller;
 
 import ch.qos.logback.core.joran.spi.ActionException;
+import jakarta.servlet.http.HttpSession;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 import lombok.RequiredArgsConstructor;
@@ -28,6 +29,14 @@ public class MainController {
   public static final String REDIRECT_MAIN = "redirect:/main/items";
   private final ItemService itemService;
   private final CartService cartService;
+
+  @GetMapping("/login")
+  public String login(Model model, HttpSession session) {
+    if (session.getAttribute("error") != null) {
+      model.addAttribute("error", "Неверные имя пользователя или пароль");
+    }
+    return "login";
+  }
 
   /**
    * Перенаправление запросов с "/" на "/main/items".

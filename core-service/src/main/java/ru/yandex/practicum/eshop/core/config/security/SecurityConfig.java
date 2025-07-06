@@ -66,6 +66,8 @@ public class SecurityConfig {
   public ReactiveUserDetailsService userDetailsService(UserRepository userRepository) {
     return username ->
         userRepository.findByUsername(username)
+                      .doOnSuccess(user -> log.debug("Пользователь найден: {}", user))
+                      .doOnError(e -> log.error("Ошибка при поиске пользователя", e))
                       .map(UserDetailsImpl::new)
                       .cast(UserDetails.class)
                       .switchIfEmpty(
@@ -103,7 +105,7 @@ class UserDetailsImpl implements UserDetails {
   @Override
   public Collection<? extends GrantedAuthority> getAuthorities() {
     return Collections.singletonList(
-        new SimpleGrantedAuthority(user.getRole())
+        new SimpleGrantedAuthority("ROLE_" + user.getRole())
     );
   }
 
