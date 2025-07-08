@@ -30,9 +30,9 @@ import ru.yandex.practicum.eshop.core.repository.UserRepository;
 @RequiredArgsConstructor
 @Slf4j
 public class DataLoader implements ApplicationRunner {
-  private static final String ITEM_SHORTS_IMG_PATH = "/images/shorts.jpg";
-  private static final String ITEM_SUNGLASSES_IMG_PATH = "/images/sunglasses.jpg";
-  private static final String ITEM_TSHIRT_IMG_PATH = "/images/tshirt.jpg";
+  private static final String ITEM_SHORTS_IMG_PATH = "images/shorts.jpg";
+  private static final String ITEM_SUNGLASSES_IMG_PATH = "images/sunglasses.jpg";
+  private static final String ITEM_TSHIRT_IMG_PATH = "images/tshirt.jpg";
   private static final Double TOTAL_INIT = 0.00;
   public static final String PATH_INIT_SQL_SCRIPT = "classpath:db/migration/V1__init.sql";
   public static final String REDIS_KEY_ITEM = "item";
@@ -144,12 +144,12 @@ public class DataLoader implements ApplicationRunner {
     User user1 = User.builder()
                      .username("user1")
                      .password(passwordEncoder.encode("password"))
-                     .role("ROLE_USER")
+                     .role("USER")
                      .build();
     User user2 = User.builder()
                      .username("user2")
                      .password(passwordEncoder.encode("password"))
-                     .role("ROLE_USER")
+                     .role("USER")
                      .build();
 
     List<User> users = List.of(user1, user2);

@@ -8,6 +8,7 @@ import org.springframework.security.authentication.BadCredentialsException;
 import org.springframework.security.authentication.ReactiveAuthenticationManager;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.config.annotation.method.configuration.EnableReactiveMethodSecurity;
+import org.springframework.security.config.annotation.web.configuration.WebSecurityCustomizer;
 import org.springframework.security.config.annotation.web.reactive.EnableWebFluxSecurity;
 import org.springframework.security.config.web.server.ServerHttpSecurity;
 import org.springframework.security.core.Authentication;
@@ -39,6 +40,7 @@ public class SecurityConfig {
   public SecurityWebFilterChain securityWebFilterChain(ServerHttpSecurity http,
                                                        ReactiveAuthenticationManager authenticationManager) {
     return http
+        .csrf(ServerHttpSecurity.CsrfSpec::disable)
         .authenticationManager(authenticationManager)
         .authorizeExchange(exchanges -> exchanges
             .pathMatchers("/login", "/error").permitAll()
@@ -111,5 +113,13 @@ public class SecurityConfig {
   @Bean
   PasswordEncoder passwordEncoder() {
     return new BCryptPasswordEncoder();
+  }
+
+  @Bean
+  public WebSecurityCustomizer webSecurityCustomizer() {
+    return web -> web
+        .ignoring()
+        .requestMatchers("//static/**") // доступ ко всей статике
+        .requestMatchers("//resources/**"); // если ресурсы в другой папке
   }
 }
