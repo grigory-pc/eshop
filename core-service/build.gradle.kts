@@ -18,7 +18,6 @@ dependencies {
     implementation("org.springframework.boot:spring-boot-starter-validation")
     implementation("org.springframework.boot:spring-boot-starter-thymeleaf")
     implementation("org.mapstruct:mapstruct:1.5.5.Final")
-    implementation("org.hibernate.orm:hibernate-core")
     implementation("commons-fileupload:commons-fileupload:1.5")
     implementation("commons-io:commons-io")
     implementation("org.springframework.boot:spring-boot-starter-data-r2dbc")

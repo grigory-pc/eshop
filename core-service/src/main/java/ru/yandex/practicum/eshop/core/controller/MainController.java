@@ -87,9 +87,9 @@ public class MainController {
    * @param action - действие с товаром в корзине.
    * @return перенаправляет на главную страницу.
    */
-  @PostMapping("/main/items/{id}")
+  @PostMapping("/main/items/{id}/{action}")
   public Mono<String> updateMainCartItems(@PathVariable(name = "id") @NotNull Long itemId,
-                                          @RequestParam(defaultValue = "") @NotBlank String action)
+                                          @PathVariable(name = "action") @NotBlank String action)
       throws ActionException {
 
     log.info("Получен запрос на изменение корзины: {} для товара id = {}", action, itemId);
