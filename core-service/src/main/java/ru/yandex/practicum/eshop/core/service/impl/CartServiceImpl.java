@@ -5,6 +5,10 @@ import java.util.Optional;
 import java.util.stream.Collectors;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.http.HttpHeaders;
+import org.springframework.security.oauth2.client.OAuth2AuthorizeRequest;
+import org.springframework.security.oauth2.client.OAuth2AuthorizedClient;
+import org.springframework.security.oauth2.client.OAuth2AuthorizedClientManager;
 import org.springframework.stereotype.Service;
 import org.springframework.web.reactive.function.client.WebClient;
 import reactor.core.publisher.Mono;
@@ -38,11 +42,15 @@ public class CartServiceImpl implements CartService {
   public static final String BUY_REQUEST_PARAMETER = "cartId";
   public static final String ITEM_NOT_FOUND = "Товар не найден в корзине";
   public static final String ITEM_NOT_FOUND_IN_CART = "Товар не найден в корзине";
+  public static final String PRINCIPAL_NAME = "system";
+  public static final String CLIENT_NAME = "eshop";
+  public static final String BEARER_PREFIX = "Bearer ";
   private final ItemMapper itemMapper;
   private final ItemHashService itemHashService;
   private final CartRepository cartRepository;
   private final CartItemRepository cartItemRepository;
   private final WebClient paymentServiceClient;
+  private final OAuth2AuthorizedClientManager manager;
 
   @Override
   public Mono<Void> editCart(Long itemId, String actionRequest) {
@@ -84,16 +92,24 @@ public class CartServiceImpl implements CartService {
 
   @Override
   public Mono<Long> buyItems() {
+    OAuth2AuthorizedClient client = manager.authorize(OAuth2AuthorizeRequest
+                                                          .withClientRegistrationId(CLIENT_NAME)
+                                                          .principal(PRINCIPAL_NAME)
+                                                          .build()
+    );
+
+    String accessToken = client.getAccessToken().getTokenValue();
+
     return paymentServiceClient
         .post()
         .uri(uriBuilder -> uriBuilder
             .queryParam(BUY_REQUEST_PARAMETER, CART_ID)
             .build())
+        .header(HttpHeaders.AUTHORIZATION, BEARER_PREFIX + accessToken)
         .retrieve()
         .bodyToMono(CreatePaymentResponse.class)
         .map(CreatePaymentResponse::getOrderId);
   }
-
 
 
   private Mono<Void> handleCartItem(Cart existingCart, Long itemId, Action action) {
@@ -185,7 +201,7 @@ public class CartServiceImpl implements CartService {
     return cartItemRepository.findCartItemsByCartId(CART_ID)
                              .flatMap(cartItem -> itemHashService.findById(cartItem.getItemId())
                                                                  .map(item -> item.getPrice()
-                                                                             * cartItem.getCount()))
+                                                                              * cartItem.getCount()))
                              .reduce(0.0, Double::sum)
                              .onErrorResume(e -> {
                                log.error(MESSAGE_LOG_FIND_CARTITEM.getMessage(), e);
