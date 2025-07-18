@@ -1,6 +1,7 @@
 package ru.yandex.practicum.eshop.core.service.impl;
 
 import java.util.List;
+import java.util.NoSuchElementException;
 import java.util.Optional;
 import java.util.stream.Collectors;
 import lombok.RequiredArgsConstructor;
@@ -40,92 +41,109 @@ import static ru.yandex.practicum.eshop.core.enums.MessagesLog.MESSAGE_LOG_SAVE_
 @Service
 @RequiredArgsConstructor
 public class CartServiceImpl implements CartService {
-  private static final Long CART_ID = 1L;
   public static final String BUY_REQUEST_PARAMETER = "cartId";
   public static final String ITEM_NOT_FOUND = "Товар не найден в корзине";
   public static final String ITEM_NOT_FOUND_IN_CART = "Товар не найден в корзине";
+  private static final Double TOTAL_INIT = 0.00;
+
   public static final String PRINCIPAL_NAME = "system";
   public static final String CLIENT_NAME = "eshop";
   public static final String BEARER_PREFIX = "Bearer ";
+  public static final String CART_NOT_FOUND = "Корзина не найдена для пользователя user: %s";
   private final ItemMapper itemMapper;
   private final ItemHashService itemHashService;
   private final CartRepository cartRepository;
   private final CartItemRepository cartItemRepository;
   private final UserRepository userRepository;
   private final WebClient paymentServiceClient;
-//  private final OAuth2AuthorizedClientManager manager;
+  //  private final OAuth2AuthorizedClientManager manager;
 
   @Override
-  public Mono<Void> editCart(Long itemId, String actionRequest) {
+  public Mono<Void> editCart(Long itemId, String actionRequest, String username) {
     var action = Action.getValueOf(actionRequest);
-    var username = SecurityContextHolder.getContext()
-                                           .getAuthentication()
-                                           .getName();
 
-    var userId = userRepository.findIdByUsername(username);
-
-
-    return cartRepository.findById(CART_ID)
+    return cartRepository.findByUsername(username)
+                         .switchIfEmpty(createNewCart(username))
                          .flatMap(existingCart -> handleCartItem(existingCart, itemId, action))
                          .onErrorResume(this::handleDatabaseError);
   }
 
   @Override
-  public Mono<CartDto> getCartItems() {
+  public Mono<CartDto> getCartItems(String username) {
     return Mono.defer(() -> {
       log.info(MESSAGE_LOG_DB_GET_REQUEST.getMessage());
+      return cartRepository.findByUsername(username)
+                           .switchIfEmpty(createNewCart(username))
+                           .map(Cart::getId)
+                           .flatMap(cartId ->
+                                        getItemsFromCart(cartId)
+                                            .map(items -> {
+                                              log.info(MESSAGE_LOG_ITEMS_SIZE.getMessage(),
+                                                       items.size());
+                                              return items;
+                                            })
+                                            .map(items -> {
+                                              double total = items.stream()
+                                                                  .mapToDouble(
+                                                                      item -> item.getPrice()
+                                                                              * item.getCount())
+                                                                  .sum();
 
-      return getItemsFromCart()
-          .map(items -> {
-            log.info(MESSAGE_LOG_ITEMS_SIZE.getMessage(), items.size());
-            return items;
-          })
-          .map(items -> {
-            double total = items.stream()
-                                .mapToDouble(item -> item.getPrice() * item.getCount())
-                                .sum();
-
-            return CartDto.builder()
-                          .id(CART_ID)
-                          .items(itemMapper.toListDto(items))
-                          .total(total)
-                          .build();
-          })
-          .onErrorResume(e -> {
-            log.error(MESSAGE_LOG_FIND_CARTITEM.getMessage(), e);
-            return Mono.error(
-                new DataBaseRequestException(MESSAGE_LOG_DB_RESPONSE_ERROR.getMessage(), e));
-          });
+                                              return CartDto.builder()
+                                                            .id(cartId)
+                                                            .items(itemMapper.toListDto(items))
+                                                            .total(total)
+                                                            .build();
+                                            })
+                                            .onErrorResume(e -> {
+                                              log.error(MESSAGE_LOG_FIND_CARTITEM.getMessage(), e);
+                                              return Mono.error(
+                                                  new DataBaseRequestException(
+                                                      MESSAGE_LOG_DB_RESPONSE_ERROR.getMessage(),
+                                                      e));
+                                            }));
     });
   }
 
   @Override
-  public Mono<Long> buyItems() {
-//    OAuth2AuthorizedClient client = manager.authorize(OAuth2AuthorizeRequest
-//                                                          .withClientRegistrationId(CLIENT_NAME)
-//                                                          .principal(PRINCIPAL_NAME)
-//                                                          .build()
-//    );
-//
-//    String accessToken = client.getAccessToken().getTokenValue();
+  public Mono<Long> buyItems(String username) {
+    //    OAuth2AuthorizedClient client = manager.authorize(OAuth2AuthorizeRequest
+    //                                                          .withClientRegistrationId(CLIENT_NAME)
+    //                                                          .principal(PRINCIPAL_NAME)
+    //                                                          .build()
+    //    );
+    //
+    //    String accessToken = client.getAccessToken().getTokenValue();
 
-    return paymentServiceClient
-        .post()
-        .uri(uriBuilder -> uriBuilder
-            .queryParam(BUY_REQUEST_PARAMETER, CART_ID)
-            .build())
-//        .header(HttpHeaders.AUTHORIZATION, BEARER_PREFIX + accessToken)
-        .retrieve()
-        .bodyToMono(CreatePaymentResponse.class)
-        .map(CreatePaymentResponse::getOrderId);
+    return cartRepository.findByUsername(username)
+                         .switchIfEmpty(Mono.error(new NoSuchElementException(
+                             String.format(CART_NOT_FOUND, username))))
+                         .map(Cart::getId)
+                         .flatMap(cartId -> paymentServiceClient
+                             .post()
+                             .uri(uriBuilder -> uriBuilder
+                                 .queryParam(BUY_REQUEST_PARAMETER, cartId)
+                                 .build())
+                             //        .header(HttpHeaders.AUTHORIZATION, BEARER_PREFIX + accessToken)
+                             .retrieve()
+                             .bodyToMono(CreatePaymentResponse.class)
+                             .map(CreatePaymentResponse::getOrderId));
   }
 
+  private Mono<Cart> createNewCart(String username) {
+    var newCart = Cart.builder()
+                      .username(username)
+                      .total(TOTAL_INIT)
+                      .build();
+
+    return cartRepository.save(newCart);
+  }
 
   private Mono<Void> handleCartItem(Cart existingCart, Long itemId, Action action) {
     return switch (action) {
       case PLUS -> incrementItem(itemId, existingCart);
       case MINUS -> decrementItem(itemId, existingCart);
-      case DELETE -> cartItemRepository.findCartItemByCartIdAndItemId(CART_ID, itemId)
+      case DELETE -> cartItemRepository.findCartItemByCartIdAndItemId(existingCart.getId(), itemId)
                                        .map(Optional::ofNullable)
                                        .switchIfEmpty(Mono.error(
                                            new ActionException(ITEM_NOT_FOUND)))
@@ -145,12 +163,12 @@ public class CartServiceImpl implements CartService {
   }
 
   private Mono<Void> incrementItem(Long itemId, Cart existingCart) {
-    return cartItemRepository.findCartItemByCartIdAndItemId(CART_ID, itemId)
+    return cartItemRepository.findCartItemByCartIdAndItemId(existingCart.getId(), itemId)
                              .map(Optional::ofNullable)
                              .switchIfEmpty(
                                  cartItemRepository.save(
                                      CartItem.builder()
-                                             .cartId(CART_ID)
+                                             .cartId(existingCart.getId())
                                              .itemId(itemId)
                                              .count(1)
                                              .build()
@@ -176,7 +194,7 @@ public class CartServiceImpl implements CartService {
   }
 
   private Mono<Void> decrementItem(Long itemId, Cart existingCart) {
-    return cartItemRepository.findCartItemByCartIdAndItemId(CART_ID, itemId)
+    return cartItemRepository.findCartItemByCartIdAndItemId(existingCart.getId(), itemId)
                              .map(Optional::ofNullable)
                              .switchIfEmpty(
                                  Mono.error(new ActionException(ITEM_NOT_FOUND_IN_CART)))
@@ -195,7 +213,7 @@ public class CartServiceImpl implements CartService {
   }
 
   private Mono<Void> updateCartTotal(Cart existingCart) {
-    return calculateTotal()
+    return calculateTotal(existingCart.getId())
         .doOnNext(existingCart::setTotal)
         .then(cartRepository.save(existingCart))
         .onErrorResume(e -> {
@@ -206,8 +224,8 @@ public class CartServiceImpl implements CartService {
         .then();
   }
 
-  private Mono<Double> calculateTotal() {
-    return cartItemRepository.findCartItemsByCartId(CART_ID)
+  private Mono<Double> calculateTotal(Long cartId) {
+    return cartItemRepository.findCartItemsByCartId(cartId)
                              .flatMap(cartItem -> itemHashService.findById(cartItem.getItemId())
                                                                  .map(item -> item.getPrice()
                                                                               * cartItem.getCount()))
@@ -219,8 +237,8 @@ public class CartServiceImpl implements CartService {
                              });
   }
 
-  private Mono<List<Item>> getItemsFromCart() {
-    return cartItemRepository.findCartItemsByCartId(CART_ID)
+  private Mono<List<Item>> getItemsFromCart(Long cartId) {
+    return cartItemRepository.findCartItemsByCartId(cartId)
                              .map(CartItem::getItemId)
                              .collect(Collectors.toSet())
                              .flatMap(ids -> itemHashService.findAllByIds(ids)

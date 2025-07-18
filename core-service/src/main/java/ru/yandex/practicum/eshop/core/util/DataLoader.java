@@ -6,21 +6,19 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.List;
 import java.util.Map;
+import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.boot.ApplicationArguments;
 import org.springframework.boot.ApplicationRunner;
 import org.springframework.core.io.ResourceLoader;
 import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.r2dbc.core.DatabaseClient;
 import org.springframework.security.crypto.password.PasswordEncoder;
+import org.springframework.stereotype.Component;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
-import ru.yandex.practicum.eshop.core.entity.Cart;
 import ru.yandex.practicum.eshop.core.entity.Item;
 import ru.yandex.practicum.eshop.core.entity.User;
-import ru.yandex.practicum.eshop.core.repository.CartRepository;
-import lombok.RequiredArgsConstructor;
-import lombok.extern.slf4j.Slf4j;
-import org.springframework.stereotype.Component;
 import ru.yandex.practicum.eshop.core.repository.UserRepository;
 
 /**
@@ -33,7 +31,6 @@ public class DataLoader implements ApplicationRunner {
   private static final String ITEM_SHORTS_IMG_PATH = "images/shorts.jpg";
   private static final String ITEM_SUNGLASSES_IMG_PATH = "images/sunglasses.jpg";
   private static final String ITEM_TSHIRT_IMG_PATH = "images/tshirt.jpg";
-  private static final Double TOTAL_INIT = 0.00;
   public static final String PATH_INIT_SQL_SCRIPT = "classpath:db/migration/V1__init.sql";
   public static final String REDIS_KEY_ITEM = "item";
   public static final String REDIS_ITEM_FIELD_TITLE = "title";
@@ -43,7 +40,6 @@ public class DataLoader implements ApplicationRunner {
   public static final String REDIS_ITEM_FIELD_COUNT = "count";
   private final ConnectionFactory connectionFactory;
   private final ResourceLoader resourceLoader;
-  private final CartRepository cartRepository;
   private final RedisTemplate<String, Object> redisTemplate;
   private final UserRepository userRepository;
   private final PasswordEncoder passwordEncoder;
@@ -57,7 +53,6 @@ public class DataLoader implements ApplicationRunner {
       throw new RuntimeException(e);
     }
     addItems();
-    addCart();
     addUsers();
   }
 
@@ -128,16 +123,6 @@ public class DataLoader implements ApplicationRunner {
     );
 
     log.info("Товары добавлены в кэш");
-  }
-
-  private void addCart() {
-    Cart newCart = Cart.builder()
-                       .total(TOTAL_INIT)
-                       .build();
-
-    cartRepository.save(newCart)
-                  .doOnNext(cart -> log.info("Сохранена корзина с ID: " + cart.getId()))
-                  .subscribe(cart -> log.info(cart.toString()));
   }
 
   private void addUsers() {

@@ -4,6 +4,7 @@ import ch.qos.logback.core.joran.spi.ActionException;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 import java.net.URI;
+import java.security.Principal;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatus;
@@ -31,13 +32,14 @@ public class CartController {
    * Обрабатывает GET-запросы на получение списка товаров в корзине.
    *
    * @param model - модель данных.
+   * @param principal - данные пользователя.
    * @return главная страница.
    */
   @GetMapping("/cart/items")
-  public Mono<String> getCartItems(Model model) {
+  public Mono<String> getCartItems(Model model, Principal principal) {
     return Mono.just(model)
                .doOnNext(m -> log.info("Получен запрос на получение списка товаров в корзине"))
-               .flatMap(m -> cartService.getCartItems()
+               .flatMap(m -> cartService.getCartItems(principal.getName())
                                         .doOnNext(dto -> log.info(
                                             "Получен список товаров в корзине размером: {}",
                                             dto.items().size()))
@@ -59,29 +61,33 @@ public class CartController {
    *
    * @param itemId - id товара.
    * @param action - действие с товаром в корзине.
+   * @param principal - данные пользователя.
+   *
    * @return перенаправляет на страницу корзины.
    */
   @PostMapping("/cart/items/{id}/{action}")
   public Mono<String> updateCartItems(@PathVariable(name = "id") @NotNull Long itemId,
-                                      @PathVariable(name = "action") @NotBlank String action)
+                                      @PathVariable(name = "action") @NotBlank String action,
+                                      Principal principal)
       throws ActionException {
 
     log.info("Получен запрос на изменение корзины: {} для товара id = {}", action, itemId);
 
-    return cartService.editCart(itemId, action)
+    return cartService.editCart(itemId, action, principal.getName())
                       .then(Mono.just(REDIRECT_CART));
   }
 
   /**
-   * Купить товары в корзине.
+   * Покупка товаров в корзине.
+   * @param principal - данные пользователя.
    *
    * @return перенаправляет на страницу заказов.
    */
   @PostMapping("/buy")
-  public Mono<ResponseEntity<String>> buyItems() {
+  public Mono<ResponseEntity<String>> buyItems(Principal principal) {
     log.info("Получен запрос на покупку товаров в корзине");
 
-    return cartService.buyItems()
+    return cartService.buyItems(principal.getName())
                       .flatMap(orderId -> {
                         URI redirectUri = URI.create(
                             REDIRECT_ORDERS + "?orderId=" + orderId + "&newOrder=true");
