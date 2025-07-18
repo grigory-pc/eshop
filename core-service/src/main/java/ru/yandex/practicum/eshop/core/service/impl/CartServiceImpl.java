@@ -6,6 +6,7 @@ import java.util.stream.Collectors;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpHeaders;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.oauth2.client.OAuth2AuthorizeRequest;
 import org.springframework.security.oauth2.client.OAuth2AuthorizedClient;
 import org.springframework.security.oauth2.client.OAuth2AuthorizedClientManager;
@@ -23,6 +24,7 @@ import ru.yandex.practicum.eshop.core.exceptions.DataBaseRequestException;
 import ru.yandex.practicum.eshop.core.mappers.ItemMapper;
 import ru.yandex.practicum.eshop.core.repository.CartItemRepository;
 import ru.yandex.practicum.eshop.core.repository.CartRepository;
+import ru.yandex.practicum.eshop.core.repository.UserRepository;
 import ru.yandex.practicum.eshop.core.service.CartService;
 import ru.yandex.practicum.eshop.core.repository.ItemHashService;
 
@@ -49,12 +51,19 @@ public class CartServiceImpl implements CartService {
   private final ItemHashService itemHashService;
   private final CartRepository cartRepository;
   private final CartItemRepository cartItemRepository;
+  private final UserRepository userRepository;
   private final WebClient paymentServiceClient;
-  private final OAuth2AuthorizedClientManager manager;
+//  private final OAuth2AuthorizedClientManager manager;
 
   @Override
   public Mono<Void> editCart(Long itemId, String actionRequest) {
-    Action action = Action.getValueOf(actionRequest);
+    var action = Action.getValueOf(actionRequest);
+    var username = SecurityContextHolder.getContext()
+                                           .getAuthentication()
+                                           .getName();
+
+    var userId = userRepository.findIdByUsername(username);
+
 
     return cartRepository.findById(CART_ID)
                          .flatMap(existingCart -> handleCartItem(existingCart, itemId, action))
@@ -92,20 +101,20 @@ public class CartServiceImpl implements CartService {
 
   @Override
   public Mono<Long> buyItems() {
-    OAuth2AuthorizedClient client = manager.authorize(OAuth2AuthorizeRequest
-                                                          .withClientRegistrationId(CLIENT_NAME)
-                                                          .principal(PRINCIPAL_NAME)
-                                                          .build()
-    );
-
-    String accessToken = client.getAccessToken().getTokenValue();
+//    OAuth2AuthorizedClient client = manager.authorize(OAuth2AuthorizeRequest
+//                                                          .withClientRegistrationId(CLIENT_NAME)
+//                                                          .principal(PRINCIPAL_NAME)
+//                                                          .build()
+//    );
+//
+//    String accessToken = client.getAccessToken().getTokenValue();
 
     return paymentServiceClient
         .post()
         .uri(uriBuilder -> uriBuilder
             .queryParam(BUY_REQUEST_PARAMETER, CART_ID)
             .build())
-        .header(HttpHeaders.AUTHORIZATION, BEARER_PREFIX + accessToken)
+//        .header(HttpHeaders.AUTHORIZATION, BEARER_PREFIX + accessToken)
         .retrieve()
         .bodyToMono(CreatePaymentResponse.class)
         .map(CreatePaymentResponse::getOrderId);

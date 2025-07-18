@@ -17,6 +17,7 @@ import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.security.core.userdetails.UsernameNotFoundException;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
+import org.springframework.security.oauth2.client.OAuth2AuthorizedClientManager;
 import org.springframework.security.web.server.SecurityWebFilterChain;
 import org.springframework.web.server.WebSession;
 import reactor.core.publisher.Mono;
@@ -119,7 +120,7 @@ public class SecurityConfig {
   public WebSecurityCustomizer webSecurityCustomizer() {
     return web -> web
         .ignoring()
-        .requestMatchers("//static/**") // доступ ко всей статике
-        .requestMatchers("//resources/**"); // если ресурсы в другой папке
+        .requestMatchers("//static/**")
+        .requestMatchers("//resources/**");
   }
 }

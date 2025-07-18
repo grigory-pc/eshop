@@ -30,7 +30,7 @@ spring:
       client:
         provider:
           keycloak:
-            issuer-uri: http://localhost:8080/realms/master # Адрес сервера авторизации для получения токена
+            issuer-uri: http://localhost:8082/realms/master # Адрес сервера авторизации для получения токена
         registration:
           eshop: # Описание клиента OAuth2
             provider: keycloak

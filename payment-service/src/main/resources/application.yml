@@ -22,3 +22,9 @@ spring:
       resource-server:
         jwt:
           issuer-uri: http://localhost:8082/realms/master
+
+logging:
+  level:
+    org:
+      springframework:
+        security: DEBUG

@@ -13,4 +13,7 @@ import ru.yandex.practicum.eshop.core.entity.User;
 public interface UserRepository extends R2dbcRepository<User, Long> {
   @Query("SELECT * FROM users WHERE username = :username")
   Mono<User> findByUsername(String username);
+
+  @Query("SELECT id FROM users WHERE username = :username")
+  Mono<Long> findIdByUsername(String username);
 }
