@@ -22,6 +22,8 @@ public class Orders {
   @Id
   @Column("id")
   private Long id;
+  @Column("username")
+  private String username;
   @Column("total_sum")
   private Double totalSum;
 }

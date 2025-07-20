@@ -22,6 +22,8 @@ public class Cart {
   @Id
   @Column("id")
   private Long id;
+  @Column("username")
+  private String username;
   @Column("total")
   private Double total;
 }
