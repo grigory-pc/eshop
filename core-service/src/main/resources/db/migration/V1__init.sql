@@ -13,7 +13,7 @@ CREATE TABLE IF NOT EXISTS items(
      itle       varchar,
      image_path   varchar,
      description varchar,
-     price double,
+     price float8,
      count       int
 );
 
