@@ -7,10 +7,8 @@ import java.util.stream.Collectors;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpHeaders;
-import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.oauth2.client.OAuth2AuthorizeRequest;
-import org.springframework.security.oauth2.client.OAuth2AuthorizedClient;
-import org.springframework.security.oauth2.client.OAuth2AuthorizedClientManager;
+import org.springframework.security.oauth2.client.ReactiveOAuth2AuthorizedClientManager;
 import org.springframework.stereotype.Service;
 import org.springframework.web.reactive.function.client.WebClient;
 import reactor.core.publisher.Mono;
@@ -25,9 +23,8 @@ import ru.yandex.practicum.eshop.core.exceptions.DataBaseRequestException;
 import ru.yandex.practicum.eshop.core.mappers.ItemMapper;
 import ru.yandex.practicum.eshop.core.repository.CartItemRepository;
 import ru.yandex.practicum.eshop.core.repository.CartRepository;
-import ru.yandex.practicum.eshop.core.repository.UserRepository;
-import ru.yandex.practicum.eshop.core.service.CartService;
 import ru.yandex.practicum.eshop.core.repository.ItemHashService;
+import ru.yandex.practicum.eshop.core.service.CartService;
 
 import static ru.yandex.practicum.eshop.core.enums.MessagesLog.MESSAGE_LOG_ADD_ITEM_TO_CART;
 import static ru.yandex.practicum.eshop.core.enums.MessagesLog.MESSAGE_LOG_DB_GET_REQUEST;
@@ -54,9 +51,8 @@ public class CartServiceImpl implements CartService {
   private final ItemHashService itemHashService;
   private final CartRepository cartRepository;
   private final CartItemRepository cartItemRepository;
-  private final UserRepository userRepository;
   private final WebClient paymentServiceClient;
-  //  private final OAuth2AuthorizedClientManager manager;
+  private final ReactiveOAuth2AuthorizedClientManager manager;
 
   @Override
   public Mono<Void> editCart(Long itemId, String actionRequest, String username) {
@@ -107,27 +103,27 @@ public class CartServiceImpl implements CartService {
 
   @Override
   public Mono<Long> buyItems(String username) {
-    //    OAuth2AuthorizedClient client = manager.authorize(OAuth2AuthorizeRequest
-    //                                                          .withClientRegistrationId(CLIENT_NAME)
-    //                                                          .principal(PRINCIPAL_NAME)
-    //                                                          .build()
-    //    );
-    //
-    //    String accessToken = client.getAccessToken().getTokenValue();
+    return manager.authorize(OAuth2AuthorizeRequest.withClientRegistrationId(CLIENT_NAME)
+                                                   .principal(PRINCIPAL_NAME)
+                                                   .build())
+                  .flatMap(client -> {
+                    String accessToken = client.getAccessToken().getTokenValue();
 
-    return cartRepository.findByUsername(username)
-                         .switchIfEmpty(Mono.error(new NoSuchElementException(
-                             String.format(CART_NOT_FOUND, username))))
-                         .map(Cart::getId)
-                         .flatMap(cartId -> paymentServiceClient
-                             .post()
-                             .uri(uriBuilder -> uriBuilder
-                                 .queryParam(BUY_REQUEST_PARAMETER, cartId)
-                                 .build())
-                             //        .header(HttpHeaders.AUTHORIZATION, BEARER_PREFIX + accessToken)
-                             .retrieve()
-                             .bodyToMono(CreatePaymentResponse.class)
-                             .map(CreatePaymentResponse::getOrderId));
+                    return cartRepository.findByUsername(username)
+                                         .switchIfEmpty(Mono.error(new NoSuchElementException(
+                                             String.format(CART_NOT_FOUND, username))))
+                                         .map(Cart::getId)
+                                         .flatMap(cartId -> paymentServiceClient
+                                             .post()
+                                             .uri(uriBuilder -> uriBuilder
+                                                 .queryParam(BUY_REQUEST_PARAMETER, cartId)
+                                                 .build())
+                                             .header(HttpHeaders.AUTHORIZATION,
+                                                     BEARER_PREFIX + accessToken)
+                                             .retrieve()
+                                             .bodyToMono(CreatePaymentResponse.class)
+                                             .map(CreatePaymentResponse::getOrderId));
+                  });
   }
 
   private Mono<Cart> createNewCart(String username) {

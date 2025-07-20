@@ -25,8 +25,8 @@ public class OrderServiceImpl implements OrderService {
   private final OrderItemRepository orderItemRepository;
 
   @Override
-  public Flux<OrderDto> getOrders() {
-    return orderRepository.findAll()
+  public Flux<OrderDto> getOrders(String username) {
+    return orderRepository.findByUsername(username)
                           .flatMap(orders -> getOrderItems(orders.getId()));
   }
 

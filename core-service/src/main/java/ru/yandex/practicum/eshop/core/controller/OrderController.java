@@ -1,6 +1,7 @@
 package ru.yandex.practicum.eshop.core.controller;
 
 import jakarta.validation.constraints.NotNull;
+import java.security.Principal;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatus;
@@ -28,25 +29,26 @@ public class OrderController {
   /**
    * Обрабатывает GET-запросы на получение списка заказов.
    *
-   * @param model - модель данных.
+   * @param model     - модель данных.
+   * @param principal - данные пользователя.
    * @return страница заказов.
    */
   @GetMapping
-  public Mono<String> getOrders(Model model) {
+  public Mono<String> getOrders(Model model, Principal principal) {
     return Mono.just(model)
                .doOnNext(m -> log.info("Получен запрос на получение списка заказов"))
-               .flatMap(m -> orderService.getOrders()
+               .flatMap(m -> orderService.getOrders(principal.getName())
                                          .doOnNext(order -> log.info("Получен список заказов"))
                                          .doOnComplete(
-                                            () -> log.info("Завершено получение списка заказов"))
+                                             () -> log.info("Завершено получение списка заказов"))
                                          .collectList()
                                          .doOnNext(
-                                            list -> log.info("Получен список заказов размером: {}",
-                                                             list.size()))
+                                             list -> log.info("Получен список заказов размером: {}",
+                                                              list.size()))
                                          .flatMap(orders -> {
-                                          m.addAttribute("orders", orders);
-                                          return Mono.just(m);
-                                        })
+                                           m.addAttribute("orders", orders);
+                                           return Mono.just(m);
+                                         })
                )
                .thenReturn("orders");
   }
@@ -68,12 +70,12 @@ public class OrderController {
                    m -> log.info("Получен запрос на получение карточки заказа для id = {}", id))
                .flatMap(m -> orderService.getOrderItems(id)
                                          .doOnNext(order -> log.info(
-                                            "Из базы данных получен объект товара с id: {}", id))
+                                             "Из базы данных получен объект товара с id: {}", id))
                                          .flatMap(order -> {
-                                          m.addAttribute("order", order);
-                                          m.addAttribute("newOrder", newOrder);
-                                          return Mono.just(m);
-                                        })
+                                           m.addAttribute("order", order);
+                                           m.addAttribute("newOrder", newOrder);
+                                           return Mono.just(m);
+                                         })
                )
                .onErrorResume(e -> {
                  log.error("Ошибка при получении заказа для id = {}", id, e);

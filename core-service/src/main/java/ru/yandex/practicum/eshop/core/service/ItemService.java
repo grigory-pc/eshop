@@ -1,9 +1,9 @@
 package ru.yandex.practicum.eshop.core.service;
 
-import ru.yandex.practicum.eshop.core.enums.Sorting;
 import org.springframework.data.domain.PageImpl;
 import reactor.core.publisher.Mono;
 import ru.yandex.practicum.eshop.core.dto.ItemDto;
+import ru.yandex.practicum.eshop.core.pojo.GetItemsData;
 
 /**
  * Сервис для работы с товарами.
@@ -12,13 +12,11 @@ public interface ItemService {
   /**
    * Получение всех товаров.
    *
-   * @param search     - строка поиска.
-   * @param sort       - критерий сортировка.
-   * @param pageNumber - с какой страницы
-   * @param pageSize   - количество записей.
+   * @param getItemsData - набор данных из запроса.
+   *
    * @return список товаров.
    */
-  Mono<PageImpl<ItemDto>> getItems(String search, Sorting sort, int pageNumber, int pageSize);
+  Mono<PageImpl<ItemDto>> getItems(GetItemsData getItemsData);
 
   /**
    * Получение объекта товара по id.

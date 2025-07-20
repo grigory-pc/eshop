@@ -16,6 +16,7 @@ import org.springframework.web.reactive.result.view.RedirectView;
 import reactor.core.publisher.Mono;
 import ru.yandex.practicum.eshop.core.dto.PagingDto;
 import ru.yandex.practicum.eshop.core.enums.Sorting;
+import ru.yandex.practicum.eshop.core.pojo.GetItemsData;
 import ru.yandex.practicum.eshop.core.service.CartService;
 import ru.yandex.practicum.eshop.core.service.ItemService;
 
@@ -49,6 +50,7 @@ public class MainController {
    *                   все товары)
    * @param sort       - сортировка перечисление NO, ALPHA, PRICE (по умолчанию, NO - не
    *                   использовать сортировку).
+   * @param principal  - данные пользователя.
    * @param model      - модель данных.
    * @return главная страница.
    */
@@ -57,13 +59,20 @@ public class MainController {
                                @RequestParam(defaultValue = "NO") Sorting sort,
                                @RequestParam(defaultValue = "10") int pageSize,
                                @RequestParam(defaultValue = "0") int pageNumber,
-                               Model model) {
+                               Principal principal, Model model) {
 
     log.info(
         "Получен запрос на получение списка товаров для главной страницы. pageNumber={} pageSize={} sort={}",
         pageNumber, pageSize, sort);
+    GetItemsData getItemsData = GetItemsData.builder()
+                                            .search(search)
+                                            .sort(sort)
+                                            .pageSize(pageSize)
+                                            .pageNumber(pageNumber)
+                                            .username(principal.getName())
+                                            .build();
 
-    return itemService.getItems(search, sort, pageNumber, pageSize)
+    return itemService.getItems(getItemsData)
                       .flatMap(page -> {
                         model.addAttribute("items", page.getContent());
                         model.addAttribute("search", search);
@@ -84,10 +93,9 @@ public class MainController {
   /**
    * Изменение количества товаров в корзине на главной странице.
    *
-   * @param itemId - id товара.
-   * @param action - действие с товаром в корзине.
+   * @param itemId    - id товара.
+   * @param action    - действие с товаром в корзине.
    * @param principal - данные пользователя.
-   *
    * @return перенаправляет на главную страницу.
    */
   @PostMapping("/main/items/{id}/{action}")
