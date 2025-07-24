@@ -13,12 +13,16 @@ public enum MessagesLog {
   MESSAGE_LOG_ITEMS_SIZE("Получен ответ от БД со списком товаров размером = {}"),
   MESSAGE_LOG_FLUSH_CART("Очистка корзины и количества товаров после размещения заказа"),
   MESSAGE_LOG_FLUSH_CART_SUCCESS("Очистка корзины и количества товаров успешно выполнена"),
-  MESSAGE_LOG_ADD_ITEM_TO_CART("Ошибка доступа к базе данных при попытке добавления товара в корзину"),
+  MESSAGE_LOG_ADD_ITEM_TO_CART(
+      "Ошибка доступа к базе данных при попытке добавления товара в корзину"),
   MESSAGE_LOG_SAVE_CART("Ошибка БД при попытке сохранения корзины"),
   MESSAGE_LOG_FIND_CARTITEM("Ошибка БД при попытке поиска соотношения товара и корзины"),
-  MESSAGE_LOG_FIND_ITEM_OR_CARTITEM("Ошибка БД при попытке поиска товара или соотношения товара и корзины"),
+  MESSAGE_LOG_FIND_ITEM_OR_CARTITEM(
+      "Ошибка БД при попытке поиска товара или соотношения товара и корзины"),
   MESSAGE_LOG_FIND_ALL_ITEMS("Ошибка БД при попытке поиска всех товаров"),
-  MESSAGE_LOG_FIND_ITEM("Ошибка БД при попытке поиска товара");
+  MESSAGE_LOG_FIND_ITEM("Ошибка БД при попытке поиска товара"),
+  MESSAGE_LOG_FIND_USER("Ошибка БД при попытке поиска пользователя"),
+  USER_NOT_FOUND("Пользователь не найден");
 
   private final String message;
 }

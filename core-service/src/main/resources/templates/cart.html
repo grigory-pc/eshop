@@ -1,6 +1,6 @@
 <!DOCTYPE html>
 <html lang="en" xmlns:th="http://www.thymeleaf.org">
-
+<meta charset="UTF-8">
 <head>
     <title>Корзина товаров</title>
 </head>
@@ -34,12 +34,21 @@
                 </tr>
                 <tr>
                     <td>
-                        <form th:action="${'/cart/items/'+item.getId()}" method="post">
-                            <button name="action" value="minus">-</button>
+                        <div>
+                            <form th:action="${'/cart/items/' + item.getId() + '/minus'}" method="post">
+                                <button type="submit">-</button>
+                            </form>
+
                             <span th:text="${item.getCount()}"></span>
-                            <button name="action" value="plus">+</button>
-                            <button name="action" value="delete" style="float:right;">&cross;</button>
-                        </form>
+
+                            <form th:action="${'/cart/items/' + item.getId() + '/plus'}" method="post">
+                                <button type="submit">+</button>
+                            </form>
+
+                            <form th:action="${'/cart/items/' + item.getId() + '/delete'}" method="post">
+                                <button type="delete" style="float:right;">&cross;</button>
+                            </form>
+                        </div>
                     </td>
                 </tr>
             </table>

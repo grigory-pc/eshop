@@ -59,7 +59,12 @@ public class PaymentServiceImpl implements PaymentService {
     return Mono.defer(() -> {
       log.info(MESSAGE_LOG_FLUSH_CART.getMessage());
 
-      Cart cart = new Cart(cartId, TOTAL_INIT);
+      Cart cart = Cart.builder()
+                      .id(cartId)
+                      .username(orders.getUsername())
+                      .total(TOTAL_INIT)
+                      .build();
+
       return cartRepository.save(cart)
                            .then(cartItemRepository.deleteAllByCartId(cartId))
                            .then(itemHashService.updateAllCountToZero())
@@ -90,6 +95,7 @@ public class PaymentServiceImpl implements PaymentService {
     List<CartItem> cartItems = cartAndItems.getT2();
 
     Orders orders = Orders.builder()
+                          .username(cart.getUsername())
                           .totalSum(cart.getTotal())
                           .build();
 
@@ -104,7 +110,7 @@ public class PaymentServiceImpl implements PaymentService {
     return Flux.fromIterable(cartItems)
                .flatMap(cartItem -> itemHashService.findById(cartItem.getItemId())
                                                    .map(item -> createOrderItem(orders, item,
-                                                                               cartItem.getCount())))
+                                                                                cartItem.getCount())))
                .collectList()
                .flatMap(orderItems -> orderItemRepository.saveAll(orderItems)
                                                          .collectList()

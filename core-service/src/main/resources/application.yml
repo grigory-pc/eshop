@@ -1,5 +1,10 @@
 server:
   port: 8080
+  servlet:
+    encoding:
+      enabled: true
+      charset: UTF-8
+      force: true
 
 spring:
   r2dbc:
@@ -17,9 +22,32 @@ spring:
     redis:
       host: localhost
       port: 6379
+  security:
+    user:
+      name: user
+      password: password
+    oauth2:
+      client:
+        provider:
+          keycloak:
+            issuer-uri: http://localhost:8082/realms/master # Адрес сервера авторизации для получения токена
+        registration:
+          eshop: # Описание клиента OAuth2
+            provider: keycloak
+            authorizationGrantType: client_credentials
+            client-id: eshop-core
+            client-secret: 3xtyfQtqjHnuEbj0YN8M9fuVY0yPERYE
+            scope: profile
+            clientAuthenticationMethod: client_secret_post # Способ передачи секрета
 
 client:
   payment-service:
     base-url: http://localhost:8081/payment-service/buy
     connect-timeout-ms: 1000
     response-timeout-ms: 1000
+
+logging:
+  level:
+    org:
+      springframework:
+        security: DEBUG

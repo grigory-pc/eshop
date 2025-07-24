@@ -1,4 +1,4 @@
-package ru.yandex.practicum.eshop.payment.service.entity;
+package ru.yandex.practicum.eshop.core.entity;
 
 import lombok.AllArgsConstructor;
 import lombok.Builder;
@@ -10,20 +10,22 @@ import org.springframework.data.relational.core.mapping.Column;
 import org.springframework.data.relational.core.mapping.Table;
 
 /**
- * Класс заказа.
+ * Класс пользователей.
  */
 @Getter
 @Setter
 @Builder
 @AllArgsConstructor
 @RequiredArgsConstructor
-@Table(name = "orders")
-public class Orders {
+@Table(name = "users")
+public class User {
   @Id
   @Column("id")
   private Long id;
   @Column("username")
   private String username;
-  @Column("total_sum")
-  private Double totalSum;
+  @Column("password")
+  private String password;
+  @Column("role")
+  private String role;
 }

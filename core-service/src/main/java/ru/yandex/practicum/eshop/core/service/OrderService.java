@@ -10,10 +10,11 @@ import ru.yandex.practicum.eshop.core.dto.OrderDto;
 public interface OrderService {
   /**
    * Получение всех заказов.
+   * @param username - имя пользователя.
    *
    * @return список заказов.
    */
-  Flux<OrderDto> getOrders();
+  Flux<OrderDto> getOrders(String username);
 
   /**
    * Получение объекта заказа по id.

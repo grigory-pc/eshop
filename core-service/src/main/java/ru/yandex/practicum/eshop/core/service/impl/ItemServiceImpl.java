@@ -14,6 +14,7 @@ import reactor.core.publisher.Mono;
 import ru.yandex.practicum.eshop.core.dto.ItemDto;
 import ru.yandex.practicum.eshop.core.enums.Sorting;
 import ru.yandex.practicum.eshop.core.exceptions.ItemNotFoundException;
+import ru.yandex.practicum.eshop.core.pojo.GetItemsData;
 import ru.yandex.practicum.eshop.core.repository.ItemHashService;
 import ru.yandex.practicum.eshop.core.service.ItemService;
 
@@ -31,44 +32,51 @@ public class ItemServiceImpl implements ItemService {
 
 
   @Override
-  public Mono<PageImpl<ItemDto>> getItems(String search, Sorting sort, int pageNumber,
-                                          int pageSize) {
-    Pageable pageableItems = getPageableItemsRequest(sort, pageNumber, pageSize);
+  public Mono<PageImpl<ItemDto>> getItems(GetItemsData getItemsData) {
+
+    //    получить корзину Если её нет, то создать. Получить список карт итем на базе карт.
+    //    Для полученного списка товаров сделать фильтр на базе товаров из карт итем.
+    // проставить каунт для списка товаров из каунт итем.
+
+
+    Pageable pageableItems = getPageableItemsRequest(getItemsData.sort(), getItemsData.pageNumber(),
+                                                     getItemsData.pageSize());
     log.info(MESSAGE_LOG_DB_GET_REQUEST.getMessage());
 
-    if (search.isEmpty()) {
+    if (getItemsData.search().isEmpty()) {
       return itemHashService.findAll(pageableItems)
                             .collectList()
                             .flatMap(items -> {
-                             long total = items.size();
-                             return Mono.just(
-                                 new PageImpl<>(itemMapper.toListDto(items),
-                                                pageableItems,
-                                                total));
-                           })
+                              long total = items.size();
+                              return Mono.just(
+                                  new PageImpl<>(itemMapper.toListDto(items),
+                                                 pageableItems,
+                                                 total));
+                            })
+
                             .onErrorResume(e -> {
-                             log.error(MESSAGE_LOG_FIND_ALL_ITEMS.getMessage(), e);
-                             return Mono.error(new DataBaseRequestException(
-                                 MESSAGE_LOG_DB_RESPONSE_ERROR.getMessage(), e));
-                           });
+                              log.error(MESSAGE_LOG_FIND_ALL_ITEMS.getMessage(), e);
+                              return Mono.error(new DataBaseRequestException(
+                                  MESSAGE_LOG_DB_RESPONSE_ERROR.getMessage(), e));
+                            });
 
     } else {
-      return itemHashService.findByTitleContainingIgnoreCase(search, pageableItems)
-                            .skip((long) pageNumber * pageSize)
-                            .limitRate(pageSize)
+      return itemHashService.findByTitleContainingIgnoreCase(getItemsData.search(), pageableItems)
+                            .skip((long) getItemsData.pageNumber() * getItemsData.pageSize())
+                            .limitRate(getItemsData.pageSize())
                             .collectList()
                             .flatMap(items -> {
-                             long total = items.size();
-                             return Mono.just(
-                                 new PageImpl<>(itemMapper.toListDto(items),
-                                                pageableItems,
-                                                total));
-                           })
+                              long total = items.size();
+                              return Mono.just(
+                                  new PageImpl<>(itemMapper.toListDto(items),
+                                                 pageableItems,
+                                                 total));
+                            })
                             .onErrorResume(e -> {
-                             log.error(MESSAGE_LOG_FIND_ALL_ITEMS.getMessage(), e);
-                             return Mono.error(new DataBaseRequestException(
-                                 MESSAGE_LOG_DB_RESPONSE_ERROR.getMessage(), e));
-                           });
+                              log.error(MESSAGE_LOG_FIND_ALL_ITEMS.getMessage(), e);
+                              return Mono.error(new DataBaseRequestException(
+                                  MESSAGE_LOG_DB_RESPONSE_ERROR.getMessage(), e));
+                            });
     }
   }
 
@@ -81,10 +89,10 @@ public class ItemServiceImpl implements ItemService {
                             .map(itemMapper::toDto)
                             .switchIfEmpty(Mono.error(new ItemNotFoundException("Товар не найден")))
                             .onErrorResume(e -> {
-                             log.error(MESSAGE_LOG_FIND_ITEM.getMessage(), e);
-                             return Mono.error(new DataBaseRequestException(
-                                 MESSAGE_LOG_DB_RESPONSE_ERROR.getMessage(), e));
-                           });
+                              log.error(MESSAGE_LOG_FIND_ITEM.getMessage(), e);
+                              return Mono.error(new DataBaseRequestException(
+                                  MESSAGE_LOG_DB_RESPONSE_ERROR.getMessage(), e));
+                            });
     });
   }
 

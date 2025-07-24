@@ -14,19 +14,19 @@ repositories {
 dependencies {
     compileOnly("org.projectlombok:lombok")
 
-    implementation("org.springframework.boot:spring-boot-starter-web")
+    implementation("org.springframework.boot:spring-boot-starter-webflux")
     implementation("org.springframework.boot:spring-boot-starter-validation")
     implementation("org.springframework.boot:spring-boot-starter-thymeleaf")
     implementation("org.mapstruct:mapstruct:1.5.5.Final")
-    implementation("org.hibernate.orm:hibernate-core")
     implementation("commons-fileupload:commons-fileupload:1.5")
     implementation("commons-io:commons-io")
-    implementation("org.springframework.boot:spring-boot-starter-webflux")
     implementation("org.springframework.boot:spring-boot-starter-data-r2dbc")
     implementation("io.r2dbc:r2dbc-h2")
     implementation("org.postgresql:r2dbc-postgresql")
     implementation("org.springframework.data:spring-data-r2dbc")
     implementation("org.springframework.boot:spring-boot-starter-data-redis")
+    implementation("org.springframework.boot:spring-boot-starter-security")
+    implementation("org.springframework.boot:spring-boot-starter-oauth2-client")
 
     annotationProcessor("org.projectlombok:lombok")
     annotationProcessor("org.mapstruct:mapstruct-processor:1.5.5.Final")
@@ -83,12 +83,12 @@ tasks.withType<GenerateTask> {
             "useFeign" to "false",
             "useOkHttp" to "true",
             "reactive" to "true",
-            "javaVersion" to "21"
+            "javaVersion" to "17"
     ))
 }
 
 java {
     toolchain {
-        languageVersion = JavaLanguageVersion.of(21)
+        languageVersion = JavaLanguageVersion.of(17)
     }
 }

@@ -13,22 +13,25 @@ public interface CartService {
    *
    * @param itemId - id товара.
    * @param action - действие с товаром в корзине.
+   * @param username - имя пользователя.
    *
    * @throws ch.qos.logback.core.joran.spi.ActionException - исключение в случае некорректного значения в запросе для action.
    */
-  Mono<Void> editCart(Long itemId, String action) throws ActionException;
+  Mono<Void> editCart(Long itemId, String action, String username) throws ActionException;
 
   /**
    * Получение всех товаров корзины.
+   * @param username - имя пользователя.
    *
    * @return список товаров в корзине.
    */
-  Mono<CartDto> getCartItems();
+  Mono<CartDto> getCartItems(String username);
 
   /**
    * Формирование заказа для товаров в корзине.
+   * @param username - имя пользователя.
    *
    * @return id заказа.
    */
-  Mono<Long> buyItems();
+  Mono<Long> buyItems(String username);
 }

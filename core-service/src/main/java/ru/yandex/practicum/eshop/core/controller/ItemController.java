@@ -1,7 +1,9 @@
 package ru.yandex.practicum.eshop.core.controller;
 
 import ch.qos.logback.core.joran.spi.ActionException;
+import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
+import java.security.Principal;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Controller;
@@ -10,7 +12,6 @@ import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RequestParam;
 import reactor.core.publisher.Mono;
 import ru.yandex.practicum.eshop.core.service.CartService;
 import ru.yandex.practicum.eshop.core.service.ItemService;
@@ -51,17 +52,20 @@ public class ItemController {
    *
    * @param id     - id товара.
    * @param action - действие с товаром в корзине.
+   * @param principal - данные пользователя.
+   *
    * @return перенаправляет на страницу карточки товара.
    */
-  @PostMapping("/{id}")
-  public Mono<String> updateItems(@PathVariable(name = "id") Long id,
-                                  @RequestParam(defaultValue = "") String action)
+  @PostMapping("/{id}/{action}")
+  public Mono<String> updateItems(@PathVariable(name = "id") @NotNull Long id,
+                                  @PathVariable(name = "action") @NotBlank String action,
+                                  Principal principal)
       throws ActionException {
     log.info("Получен запрос из карточки товара на изменение корзины: {} для товара id = {}",
              action, id);
 
 
-    return cartService.editCart(id, action)
+    return cartService.editCart(id, action, principal.getName())
                       .then(Mono.just(REDIRECT_ITEMS + id));
   }
 }
