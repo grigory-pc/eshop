@@ -12,7 +12,7 @@ public class PaymentServiceClientBinding {
   private final PaymentServiceClientProps props;
 
   @Bean
-  public WebClient pinCheckWebClient() throws NegativeDurationException {
+  public WebClient paymentWebClient() throws NegativeDurationException {
     return DefaultWebClientFactory.getClient(props.connectTimeoutMs(), props.responseTimeoutMs(),
                                              props.baseUrl());
   }
